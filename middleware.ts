@@ -8,7 +8,13 @@ function isAdminAuthenticated(request: NextRequest): boolean {
 export default function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // حماية مسار /admin (ما عدا /admin/login)
+  // 1. إذا كان المسار هو الجذر (/) -> أعد التوجيه إلى /admin
+  if (pathname === '/') {
+    const url = new URL('/admin', request.url);
+    return NextResponse.redirect(url);
+  }
+
+  // 2. حماية مسار /admin (ما عدا /admin/login)
   if (pathname.startsWith('/admin') && !pathname.includes('/admin/login')) {
     if (!isAdminAuthenticated(request)) {
       const url = new URL('/admin/login', request.url);
