@@ -1,8 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { setCookie } from 'cookies-next';
 import { useLocale } from 'next-intl';
-import { setCookie } from 'cookies-next'; // سنضيف هذه الحزمة: npm i cookies-next
 
 const locales = [
   { code: 'ar', label: 'العربية' },
@@ -16,7 +16,7 @@ export default function LanguageSwitcher() {
 
   const switchLanguage = (locale: string) => {
     setCookie('NEXT_LOCALE', locale, { path: '/' });
-    router.refresh(); // لإعادة تحميل الصفحة باللغة الجديدة
+    router.refresh();
   };
 
   return (

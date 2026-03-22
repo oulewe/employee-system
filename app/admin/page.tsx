@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
 import { supabase } from "../lib/supabase";
 import PayrollSection from "../components/PayrollSection";
-import LanguageSwitcher from "../components/LanguageSwitcher";
 
 type Employee = {
   id: string;
@@ -28,9 +26,6 @@ type Attendance = {
 };
 
 export default function AdminPage() {
-  const t = useTranslations("admin");
-  const currency = useTranslations("common")("currency");
-
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(false);
@@ -110,7 +105,7 @@ export default function AdminPage() {
   // إضافة موظف جديد
   const addEmployee = async () => {
     if (!name || !phone || !role || !teamName || salary <= 0 || !pin) {
-      alert(t("validationError"));
+      alert("❌ أدخل جميع البيانات بشكل صحيح");
       return;
     }
 
@@ -130,7 +125,7 @@ export default function AdminPage() {
 
       if (error) throw error;
 
-      alert(t("addSuccess"));
+      alert("✅ تم إضافة الموظف بنجاح");
       setName("");
       setPhone("");
       setRole("");
@@ -141,7 +136,7 @@ export default function AdminPage() {
       await fetchEmployees();
       await fetchAttendance();
     } catch (err: any) {
-      alert(t("addError") + err.message);
+      alert("❌ خطأ: " + err.message);
       console.error(err);
     } finally {
       setLoading(false);
@@ -153,9 +148,9 @@ export default function AdminPage() {
     setRefreshing(true);
     try {
       await Promise.all([fetchEmployees(), fetchAttendance()]);
-      alert(t("refreshSuccess"));
+      alert("✅ تم تحديث البيانات بنجاح");
     } catch (err: any) {
-      alert(t("refreshError") + err.message);
+      alert("❌ خطأ في التحديث: " + err.message);
     } finally {
       setRefreshing(false);
     }
@@ -163,11 +158,11 @@ export default function AdminPage() {
 
   // حساب ساعات العمل
   const calculateWorkHours = (checkIn: string, checkOut: string | null) => {
-    if (!checkOut) return t("ongoing");
+    if (!checkOut) return "جارٍ";
     const start = new Date(checkIn).getTime();
     const end = new Date(checkOut).getTime();
     const hours = ((end - start) / (1000 * 60 * 60)).toFixed(2);
-    return `${hours} ${t("workHoursUnit")}`;
+    return `${hours} ساعة`;
   };
 
   // تصفية السجلات
@@ -200,12 +195,9 @@ export default function AdminPage() {
       }}
     >
       {/* ===== رأس الصفحة ===== */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 30 }}>
-        <div style={{ textAlign: "center", flex: 1 }}>
-          <h1 style={{ color: "#333", marginBottom: 10 }}>{t("title")}</h1>
-          <p style={{ color: "#666" }}>{t("subtitle")}</p>
-        </div>
-        <LanguageSwitcher />
+      <div style={{ textAlign: "center", marginBottom: 30 }}>
+        <h1 style={{ color: "#333", marginBottom: 10 }}>📊 لوحة تحكم المدير</h1>
+        <p style={{ color: "#666" }}>نظام إدارة فرق العمل الميدانية</p>
       </div>
 
       {/* ===== التبويبات ===== */}
@@ -233,7 +225,7 @@ export default function AdminPage() {
             borderBottom: activeTab === "employees" ? "3px solid #007bff" : "none",
           }}
         >
-          👥 {t("employees")}
+          👥 الموظفين
         </button>
         <button
           onClick={() => setActiveTab("attendance")}
@@ -248,7 +240,7 @@ export default function AdminPage() {
             borderBottom: activeTab === "attendance" ? "3px solid #007bff" : "none",
           }}
         >
-          📍 {t("attendance")}
+          📍 الحضور
         </button>
         <button
           onClick={() => setActiveTab("payroll")}
@@ -263,7 +255,7 @@ export default function AdminPage() {
             borderBottom: activeTab === "payroll" ? "3px solid #007bff" : "none",
           }}
         >
-          💰 {t("payroll")}
+          💰 الرواتب
         </button>
       </div>
 
@@ -287,7 +279,7 @@ export default function AdminPage() {
                 paddingBottom: 10,
               }}
             >
-              ➕ {t("addEmployee")}
+              ➕ إضافة موظف جديد
             </h2>
 
             <div
@@ -300,7 +292,7 @@ export default function AdminPage() {
             >
               <input
                 type="text"
-                placeholder={t("name")}
+                placeholder="الاسم"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 style={{
@@ -312,7 +304,7 @@ export default function AdminPage() {
               />
               <input
                 type="text"
-                placeholder={t("phone")}
+                placeholder="رقم الهاتف"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 style={{
@@ -324,7 +316,7 @@ export default function AdminPage() {
               />
               <input
                 type="text"
-                placeholder={t("role")}
+                placeholder="الوظيفة"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 style={{
@@ -336,7 +328,7 @@ export default function AdminPage() {
               />
               <input
                 type="text"
-                placeholder={t("team")}
+                placeholder="الفريق"
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
                 style={{
@@ -348,7 +340,7 @@ export default function AdminPage() {
               />
               <input
                 type="number"
-                placeholder={`${t("salary")} (${currency})`}
+                placeholder="الراتب (أوقية)"
                 value={salary}
                 onChange={(e) => setSalary(parseFloat(e.target.value))}
                 style={{
@@ -360,7 +352,7 @@ export default function AdminPage() {
               />
               <input
                 type="password"
-                placeholder={t("pin")}
+                placeholder="PIN"
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 style={{
@@ -388,7 +380,7 @@ export default function AdminPage() {
                 width: "100%",
               }}
             >
-              {loading ? t("loading") : `✅ ${t("save")}`}
+              {loading ? "⏳ جاري الإضافة..." : "✅ إضافة الموظف"}
             </button>
           </div>
 
@@ -409,7 +401,7 @@ export default function AdminPage() {
                 paddingBottom: 10,
               }}
             >
-              👥 {t("employees")} ({employees.length})
+              👥 الموظفين ({employees.length})
             </h3>
 
             <div style={{ overflowX: "auto", marginTop: 15 }}>
@@ -422,19 +414,19 @@ export default function AdminPage() {
               >
                 <thead>
                   <tr style={{ backgroundColor: "#f0f0f0" }}>
-                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("name")}</th>
-                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("phone")}</th>
-                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("role")}</th>
-                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("team")}</th>
-                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("salary")}</th>
-                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("pin")}</th>
+                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>الاسم</th>
+                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>الهاتف</th>
+                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>الوظيفة</th>
+                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>الفريق</th>
+                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>الراتب</th>
+                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>PIN</th>
                    </tr>
                 </thead>
                 <tbody>
                   {employees.length === 0 ? (
                     <tr>
                       <td colSpan={6} style={{ padding: 20, textAlign: "center", color: "#999" }}>
-                        {t("noData")}
+                        لا توجد موظفين حالياً
                       </td>
                     </tr>
                   ) : (
@@ -444,7 +436,7 @@ export default function AdminPage() {
                         <td style={{ padding: 10, border: "1px solid #ddd" }}>{emp.phone}</td>
                         <td style={{ padding: 10, border: "1px solid #ddd" }}>{emp.role}</td>
                         <td style={{ padding: 10, border: "1px solid #ddd" }}>{emp.team_name}</td>
-                        <td style={{ padding: 10, border: "1px solid #ddd" }}>{emp.salary} {currency}</td>
+                        <td style={{ padding: 10, border: "1px solid #ddd" }}>{emp.salary} أوقية</td>
                         <td style={{ padding: 10, border: "1px solid #ddd" }}>
                           <code style={{ backgroundColor: "#f0f0f0", padding: 4, borderRadius: 3 }}>{emp.pin}</code>
                         </td>
@@ -467,15 +459,15 @@ export default function AdminPage() {
           >
             <div style={{ backgroundColor: "#e3f2fd", padding: 20, borderRadius: 8, textAlign: "center" }}>
               <div style={{ fontSize: 24, fontWeight: "bold", color: "#1976d2" }}>{employees.length}</div>
-              <div style={{ color: "#666", marginTop: 5 }}>{t("totalEmployees")}</div>
+              <div style={{ color: "#666", marginTop: 5 }}>إجمالي الموظفين</div>
             </div>
             <div style={{ backgroundColor: "#f3e5f5", padding: 20, borderRadius: 8, textAlign: "center" }}>
               <div style={{ fontSize: 24, fontWeight: "bold", color: "#7b1fa2" }}>{attendance.filter((a) => !a.check_out).length}</div>
-              <div style={{ color: "#666", marginTop: 5 }}>{t("currentlyWorking")}</div>
+              <div style={{ color: "#666", marginTop: 5 }}>عاملون حالياً</div>
             </div>
             <div style={{ backgroundColor: "#e8f5e9", padding: 20, borderRadius: 8, textAlign: "center" }}>
               <div style={{ fontSize: 24, fontWeight: "bold", color: "#388e3c" }}>{attendance.filter((a) => a.check_out).length}</div>
-              <div style={{ color: "#666", marginTop: 5 }}>{t("finishedWork")}</div>
+              <div style={{ color: "#666", marginTop: 5 }}>انتهوا من العمل</div>
             </div>
           </div>
         </>
@@ -507,7 +499,7 @@ export default function AdminPage() {
                 flex: 1,
               }}
             >
-              📍 {t("attendanceRecords")} ({filteredAttendance.length})
+              📍 سجلات الحضور ({filteredAttendance.length})
             </h3>
             <button
               onClick={refreshData}
@@ -523,7 +515,7 @@ export default function AdminPage() {
                 fontWeight: "bold",
               }}
             >
-              {refreshing ? `🔄 ${t("refreshing")}` : `🔄 ${t("refresh")}`}
+              {refreshing ? "🔄 جاري التحديث..." : "🔄 تحديث الآن"}
             </button>
           </div>
 
@@ -549,7 +541,7 @@ export default function AdminPage() {
             />
             <input
               type="text"
-              placeholder={t("searchEmployee")}
+              placeholder="ابحث عن موظف..."
               value={filterEmployee}
               onChange={(e) => setFilterEmployee(e.target.value)}
               style={{
@@ -572,19 +564,19 @@ export default function AdminPage() {
             >
               <thead>
                 <tr style={{ backgroundColor: "#f0f0f0" }}>
-                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("employee")}</th>
-                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("checkIn")}</th>
-                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("checkOut")}</th>
-                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("workHours")}</th>
-                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("location")}</th>
-                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("image")}</th>
+                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>الموظف</th>
+                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>الدخول</th>
+                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>الخروج</th>
+                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>ساعات العمل</th>
+                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>الموقع</th>
+                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>الصورة</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAttendance.length === 0 ? (
                   <tr>
                     <td colSpan={6} style={{ padding: 20, textAlign: "center", color: "#999" }}>
-                      {t("noData")}
+                      لا توجد سجلات حضور
                     </td>
                   </tr>
                 ) : (
@@ -599,7 +591,7 @@ export default function AdminPage() {
                       <td style={{ padding: 10, border: "1px solid #ddd" }}>
                         {att.check_out
                           ? new Date(att.check_out).toLocaleString()
-                          : t("noCheckOut")}
+                          : "🔴 لم يسجل خروج"}
                       </td>
                       <td
                         style={{
@@ -619,10 +611,10 @@ export default function AdminPage() {
                             rel="noopener noreferrer"
                             style={{ color: "#007bff", textDecoration: "none" }}
                           >
-                            📍 {t("locationLink")}
+                            📍 الموقع
                           </a>
                         ) : (
-                          t("noLocation")
+                          "لا يوجد"
                         )}
                       </td>
                       <td style={{ padding: 10, border: "1px solid #ddd" }}>
@@ -633,11 +625,11 @@ export default function AdminPage() {
                               width={50}
                               height={50}
                               style={{ borderRadius: 4, cursor: "pointer" }}
-                              alt={t("workImageAlt")}
+                              alt="صورة العمل"
                             />
                           </a>
                         ) : (
-                          t("noImage")
+                          "لا توجد"
                         )}
                       </td>
                     </tr>
