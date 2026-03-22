@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export default function AdminLoginPage() {
+  const t = useTranslations('login');
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +27,7 @@ export default function AdminLoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "فشل تسجيل الدخول");
+        throw new Error(data.error || t('invalidCredentials'));
       }
 
       router.push("/admin");
@@ -58,9 +60,7 @@ export default function AdminLoginPage() {
           maxWidth: 400,
         }}
       >
-        <h1 style={{ textAlign: "center", marginBottom: 30 }}>
-          تسجيل دخول المدير
-        </h1>
+        <h1 style={{ textAlign: "center", marginBottom: 30 }}>{t('title')}</h1>
 
         {error && (
           <div
@@ -78,9 +78,7 @@ export default function AdminLoginPage() {
         )}
 
         <div style={{ marginBottom: 20 }}>
-          <label style={{ display: "block", marginBottom: 8 }}>
-            البريد الإلكتروني
-          </label>
+          <label style={{ display: "block", marginBottom: 8 }}>{t('email')}</label>
           <input
             type="email"
             value={email}
@@ -97,9 +95,7 @@ export default function AdminLoginPage() {
         </div>
 
         <div style={{ marginBottom: 30 }}>
-          <label style={{ display: "block", marginBottom: 8 }}>
-            كلمة المرور
-          </label>
+          <label style={{ display: "block", marginBottom: 8 }}>{t('password')}</label>
           <input
             type="password"
             value={password}
@@ -129,7 +125,7 @@ export default function AdminLoginPage() {
             cursor: loading ? "not-allowed" : "pointer",
           }}
         >
-          {loading ? "جاري الدخول..." : "دخول"}
+          {loading ? t('loading') : t('loginButton')}
         </button>
       </form>
     </div>

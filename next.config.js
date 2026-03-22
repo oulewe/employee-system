@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // لا نضيف أي شيء معقد
+  // ... أي إعدادات موجودة
 };
 
-module.exports = nextConfig;
+const withNextIntl = require('next-intl/plugin')();
+module.exports = withNextIntl(nextConfig);
