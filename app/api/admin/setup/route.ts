@@ -4,18 +4,18 @@ import bcrypt from 'bcryptjs';
 
 export async function GET() {
   try {
-    const email = 'admin@example.com';
-    const password = 'your-secure-password'; // غيّره
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const email = 'malekbrahim463@gmail.com';
+    const plainPassword = 'BM48633611';
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
     const { error } = await supabase.from('admins').insert({
       email,
-      password_hash: hashedPassword
+      password_hash: hashedPassword,
     });
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, message: 'Admin created' });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
