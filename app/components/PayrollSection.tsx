@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTranslations, useLocale } from "next-intl";
 import {
   calculateAllEmployeesPayroll,
   fetchMonthlyPayroll,
@@ -23,16 +22,9 @@ type PayrollRecord = {
   };
 };
 
-// دالة تنسيق العملة حسب اللغة
-const formatCurrency = (amount: number, locale: string): string => {
-  // دعم العربية والفرنسية والإنجليزية
-  let localeMap: Record<string, string> = {
-    ar: "ar-MR",
-    fr: "fr-MR",
-    en: "en-MR",
-  };
-  const usedLocale = localeMap[locale] || "ar-MR";
-  return new Intl.NumberFormat(usedLocale, {
+// دالة تنسيق العملة (أوقية موريتانية)
+const formatMRU = (amount: number): string => {
+  return new Intl.NumberFormat("ar-MR", {
     style: "currency",
     currency: "MRU",
     minimumFractionDigits: 0,
@@ -41,9 +33,6 @@ const formatCurrency = (amount: number, locale: string): string => {
 };
 
 export default function PayrollSection() {
-  const t = useTranslations("payroll");
-  const locale = useLocale();
-
   const [payrollData, setPayrollData] = useState<PayrollRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
@@ -51,7 +40,7 @@ export default function PayrollSection() {
   const [success, setSuccess] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
 
-  // ✅ حساب رواتب جميع الموظفين
+  // حساب رواتب جميع الموظفين
   const handleCalculatePayroll = async () => {
     setError("");
     setSuccess("");
@@ -62,14 +51,13 @@ export default function PayrollSection() {
       const results = await calculateAllEmployeesPayroll(selectedMonth, year);
 
       if (results.length === 0) {
-        setError(t("calculationFailed"));
+        setError("فشل حساب الرواتب");
         return;
       }
 
       const successCount = results.filter((r) => r.success).length;
-      setSuccess(t("calculationSuccess", { count: successCount }));
+      setSuccess(`✅ تم حساب رواتب ${successCount} موظف بنجاح`);
 
-      // جلب البيانات المحدثة
       await handleFetchPayroll();
     } catch (err: any) {
       setError(err.message);
@@ -78,7 +66,7 @@ export default function PayrollSection() {
     }
   };
 
-  // ✅ جلب رواتب الشهر المحدد
+  // جلب رواتب الشهر المحدد
   const handleFetchPayroll = async () => {
     setError("");
     setLoading(true);
@@ -93,12 +81,10 @@ export default function PayrollSection() {
     }
   };
 
-  // تحميل البيانات عند تغيير الشهر
   useEffect(() => {
     handleFetchPayroll();
   }, [selectedMonth]);
 
-  // ✅ حساب إجمالي الرواتب
   const totalSalaries = payrollData.reduce((sum, p) => sum + p.salary, 0);
   const totalHours = payrollData.reduce((sum, p) => sum + p.total_hours, 0);
 
@@ -113,10 +99,9 @@ export default function PayrollSection() {
       }}
     >
       <h2 style={{ color: "#2c3e50", marginTop: 0, marginBottom: 20 }}>
-        💰 {t("title")}
+        💰 إدارة الرواتب (أوقية موريتانية)
       </h2>
 
-      {/* الرسائل */}
       {error && (
         <div
           style={{
@@ -125,13 +110,9 @@ export default function PayrollSection() {
             padding: 12,
             borderRadius: 6,
             marginBottom: 15,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
           }}
         >
-          <span style={{ fontSize: 18 }}>❌</span>
-          <span>{error}</span>
+          ❌ {error}
         </div>
       )}
 
@@ -143,17 +124,12 @@ export default function PayrollSection() {
             padding: 12,
             borderRadius: 6,
             marginBottom: 15,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
           }}
         >
-          <span style={{ fontSize: 18 }}>✅</span>
-          <span>{success}</span>
+          ✅ {success}
         </div>
       )}
 
-      {/* اختيار الشهر */}
       <div
         style={{
           display: "grid",
@@ -163,15 +139,8 @@ export default function PayrollSection() {
         }}
       >
         <div>
-          <label
-            style={{
-              display: "block",
-              marginBottom: 8,
-              fontWeight: "bold",
-              color: "#2c3e50",
-            }}
-          >
-            {t("selectMonth")}
+          <label style={{ display: "block", marginBottom: 8, fontWeight: "bold" }}>
+            اختر الشهر
           </label>
           <select
             value={selectedMonth}
@@ -181,14 +150,11 @@ export default function PayrollSection() {
               padding: 10,
               border: "1px solid #ddd",
               borderRadius: 4,
-              fontSize: 14,
             }}
           >
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
               <option key={m} value={m}>
-                {new Date(2024, m - 1).toLocaleString(locale === "ar" ? "ar-SA" : locale === "fr" ? "fr-FR" : "en-US", {
-                  month: "long",
-                })}
+                {new Date(2024, m - 1).toLocaleString("ar-SA", { month: "long" })}
               </option>
             ))}
           </select>
@@ -205,11 +171,9 @@ export default function PayrollSection() {
             border: "none",
             borderRadius: 4,
             cursor: calculating ? "not-allowed" : "pointer",
-            fontWeight: "bold",
-            fontSize: 14,
           }}
         >
-          {calculating ? t("calculating") : t("calculateButton")}
+          {calculating ? "⏳ جاري الحساب..." : "🧮 حساب الرواتب"}
         </button>
 
         <button
@@ -223,15 +187,12 @@ export default function PayrollSection() {
             border: "none",
             borderRadius: 4,
             cursor: loading ? "not-allowed" : "pointer",
-            fontWeight: "bold",
-            fontSize: 14,
           }}
         >
-          {loading ? t("refreshing") : t("refreshButton")}
+          {loading ? "⏳ جاري التحديث..." : "🔄 تحديث"}
         </button>
       </div>
 
-      {/* ملخص الرواتب */}
       {payrollData.length > 0 && (
         <div
           style={{
@@ -241,136 +202,37 @@ export default function PayrollSection() {
             marginBottom: 20,
           }}
         >
-          <div
-            style={{
-              backgroundColor: "#e8f5e9",
-              padding: 15,
-              borderRadius: 8,
-              border: "1px solid #4caf50",
-            }}
-          >
-            <div style={{ fontSize: 12, color: "#666", marginBottom: 5 }}>
-              {t("totalSalaries")}
-            </div>
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: "bold",
-                color: "#27ae60",
-              }}
-            >
-              {formatCurrency(totalSalaries, locale)}
+          <div style={{ backgroundColor: "#e8f5e9", padding: 15, borderRadius: 8 }}>
+            <div style={{ fontSize: 12, color: "#666" }}>إجمالي الرواتب</div>
+            <div style={{ fontSize: 20, fontWeight: "bold", color: "#27ae60" }}>
+              {formatMRU(totalSalaries)}
             </div>
           </div>
-
-          <div
-            style={{
-              backgroundColor: "#e3f2fd",
-              padding: 15,
-              borderRadius: 8,
-              border: "1px solid #2196f3",
-            }}
-          >
-            <div style={{ fontSize: 12, color: "#666", marginBottom: 5 }}>
-              {t("totalHours")}
-            </div>
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: "bold",
-                color: "#2196f3",
-              }}
-            >
-              {totalHours} {t("hoursUnit")}
+          <div style={{ backgroundColor: "#e3f2fd", padding: 15, borderRadius: 8 }}>
+            <div style={{ fontSize: 12, color: "#666" }}>إجمالي الساعات</div>
+            <div style={{ fontSize: 20, fontWeight: "bold", color: "#2196f3" }}>
+              {totalHours} ساعة
             </div>
           </div>
-
-          <div
-            style={{
-              backgroundColor: "#fff3e0",
-              padding: 15,
-              borderRadius: 8,
-              border: "1px solid #ff9800",
-            }}
-          >
-            <div style={{ fontSize: 12, color: "#666", marginBottom: 5 }}>
-              {t("employeeCount")}
-            </div>
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: "bold",
-                color: "#ff9800",
-              }}
-            >
-              {payrollData.length} {t("employeesUnit")}
+          <div style={{ backgroundColor: "#fff3e0", padding: 15, borderRadius: 8 }}>
+            <div style={{ fontSize: 12, color: "#666" }}>عدد الموظفين</div>
+            <div style={{ fontSize: 20, fontWeight: "bold", color: "#ff9800" }}>
+              {payrollData.length} موظف
             </div>
           </div>
         </div>
       )}
 
-      {/* جدول الرواتب */}
       {payrollData.length > 0 && (
         <div style={{ overflowX: "auto" }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: 13,
-            }}
-          >
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ backgroundColor: "#f0f0f0" }}>
-                <th
-                  style={{
-                    padding: 12,
-                    border: "1px solid #ddd",
-                    textAlign: "right",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {t("employeeName")}
-                </th>
-                <th
-                  style={{
-                    padding: 12,
-                    border: "1px solid #ddd",
-                    textAlign: "right",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {t("workedHours")}
-                </th>
-                <th
-                  style={{
-                    padding: 12,
-                    border: "1px solid #ddd",
-                    textAlign: "right",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {t("baseSalary")}
-                </th>
-                <th
-                  style={{
-                    padding: 12,
-                    border: "1px solid #ddd",
-                    textAlign: "right",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {t("earnedSalary")}
-                </th>
-                <th
-                  style={{
-                    padding: 12,
-                    border: "1px solid #ddd",
-                    textAlign: "right",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {t("percentage")}
-                </th>
+                <th style={{ padding: 12, border: "1px solid #ddd", textAlign: "right" }}>الموظف</th>
+                <th style={{ padding: 12, border: "1px solid #ddd", textAlign: "right" }}>الساعات المعمول بها</th>
+                <th style={{ padding: 12, border: "1px solid #ddd", textAlign: "right" }}>الراتب الشهري الأساسي</th>
+                <th style={{ padding: 12, border: "1px solid #ddd", textAlign: "right" }}>الراتب المستحق</th>
+                <th style={{ padding: 12, border: "1px solid #ddd", textAlign: "right" }}>النسبة المئوية</th>
                </tr>
             </thead>
             <tbody>
@@ -378,48 +240,19 @@ export default function PayrollSection() {
                 const percentage = record.employee?.salary
                   ? Math.round((record.salary / record.employee.salary) * 100)
                   : 0;
-
                 return (
-                  <tr key={record.id} style={{ borderBottom: "1px solid #eee" }}>
-                    <td
-                      style={{
-                        padding: 12,
-                        border: "1px solid #ddd",
-                        fontWeight: "bold",
-                      }}
-                    >
+                  <tr key={record.id}>
+                    <td style={{ padding: 12, border: "1px solid #ddd", fontWeight: "bold" }}>
                       {record.employee?.name}
                     </td>
-                    <td
-                      style={{
-                        padding: 12,
-                        border: "1px solid #ddd",
-                        textAlign: "center",
-                      }}
-                    >
-                      {record.total_hours} {t("hoursUnit")}
+                    <td style={{ padding: 12, border: "1px solid #ddd", textAlign: "center" }}>
+                      {record.total_hours} ساعة
                     </td>
-                    <td
-                      style={{
-                        padding: 12,
-                        border: "1px solid #ddd",
-                        textAlign: "center",
-                        color: "#666",
-                      }}
-                    >
-                      {formatCurrency(record.employee?.salary || 0, locale)}
+                    <td style={{ padding: 12, border: "1px solid #ddd", textAlign: "center", color: "#666" }}>
+                      {formatMRU(record.employee?.salary || 0)}
                     </td>
-                    <td
-                      style={{
-                        padding: 12,
-                        border: "1px solid #ddd",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                        color: "#27ae60",
-                        fontSize: 14,
-                      }}
-                    >
-                      {formatCurrency(record.salary, locale)}
+                    <td style={{ padding: 12, border: "1px solid #ddd", textAlign: "center", fontWeight: "bold", color: "#27ae60" }}>
+                      {formatMRU(record.salary)}
                     </td>
                     <td
                       style={{
@@ -438,8 +271,6 @@ export default function PayrollSection() {
                             : percentage >= 75
                             ? "#856404"
                             : "#721c24",
-                        fontWeight: "bold",
-                        borderRadius: 4,
                       }}
                     >
                       {percentage}%
@@ -453,17 +284,8 @@ export default function PayrollSection() {
       )}
 
       {payrollData.length === 0 && !loading && (
-        <div
-          style={{
-            textAlign: "center",
-            color: "#999",
-            padding: 40,
-            backgroundColor: "#f9f9f9",
-            borderRadius: 8,
-          }}
-        >
-          <div style={{ fontSize: 24, marginBottom: 10 }}>📊</div>
-          {t("noData")}
+        <div style={{ textAlign: "center", color: "#999", padding: 40 }}>
+          📊 لا توجد بيانات رواتب للشهر المحدد
         </div>
       )}
     </div>
