@@ -1,0 +1,23 @@
+{
+  "payroll": {
+    "title": "إدارة الرواتب (أوقية موريتانية)",
+    "selectMonth": "اختر الشهر",
+    "calculateButton": "🧮 حساب الرواتب",
+    "calculating": "⏳ جاري الحساب...",
+    "refreshButton": "🔄 تحديث",
+    "refreshing": "⏳ جاري التحديث...",
+    "calculationFailed": "فشل حساب الرواتب",
+    "calculationSuccess": "✅ تم حساب رواتب {count} موظف بنجاح",
+    "totalSalaries": "إجمالي الرواتب",
+    "totalHours": "إجمالي الساعات",
+    "employeeCount": "عدد الموظفين",
+    "hoursUnit": "ساعة",
+    "employeesUnit": "موظف",
+    "employeeName": "الموظف",
+    "workedHours": "الساعات المعمول بها",
+    "baseSalary": "الراتب الشهري الأساسي",
+    "earnedSalary": "الراتب المستحق",
+    "percentage": "النسبة المئوية",
+    "noData": "لا توجد بيانات رواتب للشهر المحدد"
+  }
+}

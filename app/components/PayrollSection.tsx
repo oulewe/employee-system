@@ -1,95 +1,106 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import {
   calculateAllEmployeesPayroll,
   fetchMonthlyPayroll,
   fetchAllPayroll,
-} from "../lib/payrollCalculations"
+} from "../lib/payrollCalculations";
 
 type PayrollRecord = {
-  id: string
-  employee_id: string
-  month: number
-  total_hours: number
-  salary: number
+  id: string;
+  employee_id: string;
+  month: number;
+  total_hours: number;
+  salary: number;
   employee: {
-    id: string
-    name: string
-    phone: string
-    role: string
-    salary: number
-  }
-}
+    id: string;
+    name: string;
+    phone: string;
+    role: string;
+    salary: number;
+  };
+};
 
-// 🇲🇷 صيغة العملة الموريتانية
-const formatMRU = (amount: number): string => {
-  return new Intl.NumberFormat("ar-MR", {
+// دالة تنسيق العملة حسب اللغة
+const formatCurrency = (amount: number, locale: string): string => {
+  // دعم العربية والفرنسية والإنجليزية
+  let localeMap: Record<string, string> = {
+    ar: "ar-MR",
+    fr: "fr-MR",
+    en: "en-MR",
+  };
+  const usedLocale = localeMap[locale] || "ar-MR";
+  return new Intl.NumberFormat(usedLocale, {
     style: "currency",
     currency: "MRU",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount)
-}
+  }).format(amount);
+};
 
 export default function PayrollSection() {
-  const [payrollData, setPayrollData] = useState<PayrollRecord[]>([])
-  const [loading, setLoading] = useState(false)
-  const [calculating, setCalculating] = useState(false)
-  const [error, setError] = useState<string>("")
-  const [success, setSuccess] = useState<string>("")
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+  const t = useTranslations("payroll");
+  const locale = useLocale();
+
+  const [payrollData, setPayrollData] = useState<PayrollRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [calculating, setCalculating] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
 
   // ✅ حساب رواتب جميع الموظفين
   const handleCalculatePayroll = async () => {
-    setError("")
-    setSuccess("")
-    setCalculating(true)
+    setError("");
+    setSuccess("");
+    setCalculating(true);
 
     try {
-      const year = new Date().getFullYear()
-      const results = await calculateAllEmployeesPayroll(selectedMonth, year)
+      const year = new Date().getFullYear();
+      const results = await calculateAllEmployeesPayroll(selectedMonth, year);
 
       if (results.length === 0) {
-        setError("فشل حساب الرواتب")
-        return
+        setError(t("calculationFailed"));
+        return;
       }
 
-      const successCount = results.filter((r) => r.success).length
-      setSuccess(`✅ تم حساب رواتب ${successCount} موظف بنجاح`)
+      const successCount = results.filter((r) => r.success).length;
+      setSuccess(t("calculationSuccess", { count: successCount }));
 
       // جلب البيانات المحدثة
-      await handleFetchPayroll()
+      await handleFetchPayroll();
     } catch (err: any) {
-      setError(err.message)
+      setError(err.message);
     } finally {
-      setCalculating(false)
+      setCalculating(false);
     }
-  }
+  };
 
   // ✅ جلب رواتب الشهر المحدد
   const handleFetchPayroll = async () => {
-    setError("")
-    setLoading(true)
+    setError("");
+    setLoading(true);
 
     try {
-      const data = await fetchMonthlyPayroll(selectedMonth)
-      setPayrollData(data as PayrollRecord[])
+      const data = await fetchMonthlyPayroll(selectedMonth);
+      setPayrollData(data as PayrollRecord[]);
     } catch (err: any) {
-      setError(err.message)
+      setError(err.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // تحميل البيانات عند تغيير الشهر
   useEffect(() => {
-    handleFetchPayroll()
-  }, [selectedMonth])
+    handleFetchPayroll();
+  }, [selectedMonth]);
 
   // ✅ حساب إجمالي الرواتب
-  const totalSalaries = payrollData.reduce((sum, p) => sum + p.salary, 0)
-  const totalHours = payrollData.reduce((sum, p) => sum + p.total_hours, 0)
+  const totalSalaries = payrollData.reduce((sum, p) => sum + p.salary, 0);
+  const totalHours = payrollData.reduce((sum, p) => sum + p.total_hours, 0);
 
   return (
     <div
@@ -102,7 +113,7 @@ export default function PayrollSection() {
       }}
     >
       <h2 style={{ color: "#2c3e50", marginTop: 0, marginBottom: 20 }}>
-        💰 إدارة الرواتب (أوقية موريتانية)
+        💰 {t("title")}
       </h2>
 
       {/* الرسائل */}
@@ -160,7 +171,7 @@ export default function PayrollSection() {
               color: "#2c3e50",
             }}
           >
-            اختر الشهر
+            {t("selectMonth")}
           </label>
           <select
             value={selectedMonth}
@@ -175,7 +186,9 @@ export default function PayrollSection() {
           >
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
               <option key={m} value={m}>
-                {new Date(2024, m - 1).toLocaleString("ar-SA", { month: "long" })}
+                {new Date(2024, m - 1).toLocaleString(locale === "ar" ? "ar-SA" : locale === "fr" ? "fr-FR" : "en-US", {
+                  month: "long",
+                })}
               </option>
             ))}
           </select>
@@ -196,7 +209,7 @@ export default function PayrollSection() {
             fontSize: 14,
           }}
         >
-          {calculating ? "⏳ جاري الحساب..." : "🧮 حساب الرواتب"}
+          {calculating ? t("calculating") : t("calculateButton")}
         </button>
 
         <button
@@ -214,7 +227,7 @@ export default function PayrollSection() {
             fontSize: 14,
           }}
         >
-          {loading ? "⏳ جاري التحديث..." : "🔄 تحديث"}
+          {loading ? t("refreshing") : t("refreshButton")}
         </button>
       </div>
 
@@ -237,7 +250,7 @@ export default function PayrollSection() {
             }}
           >
             <div style={{ fontSize: 12, color: "#666", marginBottom: 5 }}>
-              إجمالي الرواتب
+              {t("totalSalaries")}
             </div>
             <div
               style={{
@@ -246,7 +259,7 @@ export default function PayrollSection() {
                 color: "#27ae60",
               }}
             >
-              {formatMRU(totalSalaries)}
+              {formatCurrency(totalSalaries, locale)}
             </div>
           </div>
 
@@ -259,7 +272,7 @@ export default function PayrollSection() {
             }}
           >
             <div style={{ fontSize: 12, color: "#666", marginBottom: 5 }}>
-              إجمالي الساعات
+              {t("totalHours")}
             </div>
             <div
               style={{
@@ -268,7 +281,7 @@ export default function PayrollSection() {
                 color: "#2196f3",
               }}
             >
-              {totalHours} ساعة
+              {totalHours} {t("hoursUnit")}
             </div>
           </div>
 
@@ -281,7 +294,7 @@ export default function PayrollSection() {
             }}
           >
             <div style={{ fontSize: 12, color: "#666", marginBottom: 5 }}>
-              عدد الموظفين
+              {t("employeeCount")}
             </div>
             <div
               style={{
@@ -290,7 +303,7 @@ export default function PayrollSection() {
                 color: "#ff9800",
               }}
             >
-              {payrollData.length} موظف
+              {payrollData.length} {t("employeesUnit")}
             </div>
           </div>
         </div>
@@ -316,7 +329,7 @@ export default function PayrollSection() {
                     fontWeight: "bold",
                   }}
                 >
-                  الموظف
+                  {t("employeeName")}
                 </th>
                 <th
                   style={{
@@ -326,7 +339,7 @@ export default function PayrollSection() {
                     fontWeight: "bold",
                   }}
                 >
-                  الساعات المعمول بها
+                  {t("workedHours")}
                 </th>
                 <th
                   style={{
@@ -336,7 +349,7 @@ export default function PayrollSection() {
                     fontWeight: "bold",
                   }}
                 >
-                  الراتب الشهري الأساسي
+                  {t("baseSalary")}
                 </th>
                 <th
                   style={{
@@ -346,7 +359,7 @@ export default function PayrollSection() {
                     fontWeight: "bold",
                   }}
                 >
-                  الراتب المستحق
+                  {t("earnedSalary")}
                 </th>
                 <th
                   style={{
@@ -356,15 +369,15 @@ export default function PayrollSection() {
                     fontWeight: "bold",
                   }}
                 >
-                  النسبة المئوية
+                  {t("percentage")}
                 </th>
-              </tr>
+               </tr>
             </thead>
             <tbody>
               {payrollData.map((record) => {
                 const percentage = record.employee?.salary
                   ? Math.round((record.salary / record.employee.salary) * 100)
-                  : 0
+                  : 0;
 
                 return (
                   <tr key={record.id} style={{ borderBottom: "1px solid #eee" }}>
@@ -384,7 +397,7 @@ export default function PayrollSection() {
                         textAlign: "center",
                       }}
                     >
-                      {record.total_hours} ساعة
+                      {record.total_hours} {t("hoursUnit")}
                     </td>
                     <td
                       style={{
@@ -394,7 +407,7 @@ export default function PayrollSection() {
                         color: "#666",
                       }}
                     >
-                      {formatMRU(record.employee?.salary || 0)}
+                      {formatCurrency(record.employee?.salary || 0, locale)}
                     </td>
                     <td
                       style={{
@@ -406,7 +419,7 @@ export default function PayrollSection() {
                         fontSize: 14,
                       }}
                     >
-                      {formatMRU(record.salary)}
+                      {formatCurrency(record.salary, locale)}
                     </td>
                     <td
                       style={{
@@ -417,14 +430,14 @@ export default function PayrollSection() {
                           percentage >= 100
                             ? "#d4edda"
                             : percentage >= 75
-                              ? "#fff3cd"
-                              : "#f8d7da",
+                            ? "#fff3cd"
+                            : "#f8d7da",
                         color:
                           percentage >= 100
                             ? "#155724"
                             : percentage >= 75
-                              ? "#856404"
-                              : "#721c24",
+                            ? "#856404"
+                            : "#721c24",
                         fontWeight: "bold",
                         borderRadius: 4,
                       }}
@@ -432,7 +445,7 @@ export default function PayrollSection() {
                       {percentage}%
                     </td>
                   </tr>
-                )
+                );
               })}
             </tbody>
           </table>
@@ -450,9 +463,9 @@ export default function PayrollSection() {
           }}
         >
           <div style={{ fontSize: 24, marginBottom: 10 }}>📊</div>
-          لا توجد بيانات رواتب للشهر المحدد
+          {t("noData")}
         </div>
       )}
     </div>
-  )
+  );
 }

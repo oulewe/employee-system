@@ -1,0 +1,23 @@
+{
+  "payroll": {
+    "title": "Gestion des salaires (Ouguiya mauritanien)",
+    "selectMonth": "Choisissez le mois",
+    "calculateButton": "🧮 Calculer les salaires",
+    "calculating": "⏳ Calcul en cours...",
+    "refreshButton": "🔄 Actualiser",
+    "refreshing": "⏳ Actualisation...",
+    "calculationFailed": "Échec du calcul des salaires",
+    "calculationSuccess": "✅ Salaires calculés pour {count} employé(s) avec succès",
+    "totalSalaries": "Total des salaires",
+    "totalHours": "Total des heures",
+    "employeeCount": "Nombre d'employés",
+    "hoursUnit": "heure(s)",
+    "employeesUnit": "employé(s)",
+    "employeeName": "Employé",
+    "workedHours": "Heures travaillées",
+    "baseSalary": "Salaire de base mensuel",
+    "earnedSalary": "Salaire dû",
+    "percentage": "Pourcentage",
+    "noData": "Aucune donnée de paie pour le mois sélectionné"
+  }
+}

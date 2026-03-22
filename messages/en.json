@@ -1,0 +1,23 @@
+{
+  "payroll": {
+    "title": "Payroll Management (Mauritanian Ouguiya)",
+    "selectMonth": "Select Month",
+    "calculateButton": "🧮 Calculate Payroll",
+    "calculating": "⏳ Calculating...",
+    "refreshButton": "🔄 Refresh",
+    "refreshing": "⏳ Refreshing...",
+    "calculationFailed": "Payroll calculation failed",
+    "calculationSuccess": "✅ Successfully calculated payroll for {count} employee(s)",
+    "totalSalaries": "Total Salaries",
+    "totalHours": "Total Hours",
+    "employeeCount": "Number of Employees",
+    "hoursUnit": "hour(s)",
+    "employeesUnit": "employee(s)",
+    "employeeName": "Employee",
+    "workedHours": "Hours Worked",
+    "baseSalary": "Monthly Base Salary",
+    "earnedSalary": "Earned Salary",
+    "percentage": "Percentage",
+    "noData": "No payroll data for the selected month"
+  }
+}
