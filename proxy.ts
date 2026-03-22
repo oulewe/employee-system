@@ -5,10 +5,10 @@ function isAdminAuthenticated(request: NextRequest): boolean {
   return adminCookie?.value === 'authenticated';
 }
 
-export default function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. إذا كان المسار هو الجذر (/) -> أعد التوجيه إلى /admin
+  // 1. إعادة التوجيه من الجذر (/) إلى /admin
   if (pathname === '/') {
     const url = new URL('/admin', request.url);
     return NextResponse.redirect(url);
