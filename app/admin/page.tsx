@@ -51,14 +51,20 @@ export default function AdminPage() {
   // قراءة admin_id من الكوكي
   useEffect(() => {
     const id = getCookie('admin_id');
+    console.log("🔍 Admin ID from cookie:", id);
     if (id && typeof id === 'string') {
       setAdminId(id);
+    } else {
+      console.warn("⚠️ Admin ID not found in cookie. Please log in again.");
     }
   }, []);
 
   // جلب الموظفين
   const fetchEmployees = async () => {
-    if (!adminId) return;
+    if (!adminId) {
+      console.warn("fetchEmployees: adminId is null");
+      return;
+    }
     try {
       const { data, error } = await supabase
         .from("employees")
@@ -121,9 +127,13 @@ export default function AdminPage() {
     }
   };
 
-  // إضافة موظف جديد
+  // إضافة موظف جديد (محسّنة مع رسائل خطأ)
   const addEmployee = async () => {
-    if (!adminId) return;
+    console.log("🔍 addEmployee called. adminId =", adminId);
+    if (!adminId) {
+      alert("❌ لم يتم العثور على معرف المدير. يرجى تسجيل الخروج والدخول مرة أخرى.");
+      return;
+    }
     if (!name || !phone || !role || !teamName || salary <= 0 || !pin) {
       alert(t("validationError"));
       return;
@@ -131,22 +141,37 @@ export default function AdminPage() {
 
     setLoading(true);
 
+    const employeeData = {
+      name,
+      phone,
+      role,
+      salary: parseFloat(salary.toString()),
+      pin,
+      team_name: teamName,
+      admin_id: adminId,
+    };
+    console.log("📤 Attempting to insert:", employeeData);
+
     try {
-      const { error } = await supabase.from("employees").insert([
-        {
-          name,
-          phone,
-          role,
-          salary: parseFloat(salary.toString()),
-          pin,
-          team_name: teamName,
-          admin_id: adminId,
-        },
-      ]);
+      const { data, error } = await supabase
+        .from("employees")
+        .insert([employeeData])
+        .select(); // .select() ليعيد السجل المُضاف
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Supabase insert error:", error);
+        alert(`❌ فشل الإضافة: ${error.message}\n${error.details || ''}`);
+        return;
+      }
 
+      if (!data || data.length === 0) {
+        alert("❌ تم الإدراج ولكن لم يتم إرجاع البيانات.");
+        return;
+      }
+
+      console.log("✅ Employee inserted:", data[0]);
       alert(t("addSuccess"));
+      // تفريغ الحقول
       setName("");
       setPhone("");
       setRole("");
@@ -157,8 +182,8 @@ export default function AdminPage() {
       await fetchEmployees();
       await fetchAttendance();
     } catch (err: any) {
-      alert(t("addError") + err.message);
-      console.error(err);
+      console.error("❌ Unexpected error:", err);
+      alert(`❌ خطأ غير متوقع: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -199,11 +224,9 @@ export default function AdminPage() {
     if (adminId) {
       fetchEmployees();
       fetchAttendance();
-
       const interval = setInterval(() => {
         fetchAttendance();
       }, 10000);
-
       return () => clearInterval(interval);
     }
   }, [adminId]);
@@ -446,7 +469,7 @@ export default function AdminPage() {
                     <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("team")}</th>
                     <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("salary")}</th>
                     <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("pin")}</th>
-                  </tr>
+                   </tr>
                 </thead>
                 <tbody>
                   {employees.length === 0 ? (
