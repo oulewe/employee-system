@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { getCookie } from "cookies-next";
 import { supabase } from "../lib/supabase";
 import PayrollSection from "../components/PayrollSection";
 import LanguageSwitcher from "../components/LanguageSwitcher";
@@ -31,6 +32,7 @@ export default function AdminPage() {
   const t = useTranslations('admin');
   const currency = useTranslations('common')('currency');
 
+  const [adminId, setAdminId] = useState<string | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,12 +48,22 @@ export default function AdminPage() {
   const [salary, setSalary] = useState<number>(0);
   const [pin, setPin] = useState("");
 
+  // قراءة admin_id من الكوكي
+  useEffect(() => {
+    const id = getCookie('admin_id');
+    if (id && typeof id === 'string') {
+      setAdminId(id);
+    }
+  }, []);
+
   // جلب الموظفين
   const fetchEmployees = async () => {
+    if (!adminId) return;
     try {
       const { data, error } = await supabase
         .from("employees")
         .select("*")
+        .eq("admin_id", adminId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -64,6 +76,7 @@ export default function AdminPage() {
 
   // جلب سجلات الحضور
   const fetchAttendance = async () => {
+    if (!adminId) return;
     try {
       const { data, error } = await supabase
         .from("attendance")
@@ -86,6 +99,7 @@ export default function AdminPage() {
           )
         `
         )
+        .eq("admin_id", adminId)
         .order("check_in", { ascending: false });
 
       if (error) throw error;
@@ -109,6 +123,7 @@ export default function AdminPage() {
 
   // إضافة موظف جديد
   const addEmployee = async () => {
+    if (!adminId) return;
     if (!name || !phone || !role || !teamName || salary <= 0 || !pin) {
       alert(t("validationError"));
       return;
@@ -125,6 +140,7 @@ export default function AdminPage() {
           salary: parseFloat(salary.toString()),
           pin,
           team_name: teamName,
+          admin_id: adminId,
         },
       ]);
 
@@ -180,15 +196,17 @@ export default function AdminPage() {
 
   // التحديث التلقائي كل 10 ثواني
   useEffect(() => {
-    fetchEmployees();
-    fetchAttendance();
-
-    const interval = setInterval(() => {
+    if (adminId) {
+      fetchEmployees();
       fetchAttendance();
-    }, 10000);
 
-    return () => clearInterval(interval);
-  }, []);
+      const interval = setInterval(() => {
+        fetchAttendance();
+      }, 10000);
+
+      return () => clearInterval(interval);
+    }
+  }, [adminId]);
 
   return (
     <div
@@ -428,7 +446,7 @@ export default function AdminPage() {
                     <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("team")}</th>
                     <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("salary")}</th>
                     <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("pin")}</th>
-                   </tr>
+                  </tr>
                 </thead>
                 <tbody>
                   {employees.length === 0 ? (
@@ -650,7 +668,7 @@ export default function AdminPage() {
       )}
 
       {/* ===== تبويب الرواتب ===== */}
-      {activeTab === "payroll" && <PayrollSection />}
+      {activeTab === "payroll" && <PayrollSection adminId={adminId} />}
     </div>
   );
 }

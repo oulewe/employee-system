@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import {
   calculateAllEmployeesPayroll,
   fetchMonthlyPayroll,
-  fetchAllPayroll,
 } from "../lib/payrollCalculations";
 
 type PayrollRecord = {
@@ -32,7 +31,11 @@ const formatMRU = (amount: number): string => {
   }).format(amount);
 };
 
-export default function PayrollSection() {
+interface PayrollSectionProps {
+  adminId: string | null;
+}
+
+export default function PayrollSection({ adminId }: PayrollSectionProps) {
   const [payrollData, setPayrollData] = useState<PayrollRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
@@ -42,13 +45,14 @@ export default function PayrollSection() {
 
   // حساب رواتب جميع الموظفين
   const handleCalculatePayroll = async () => {
+    if (!adminId) return;
     setError("");
     setSuccess("");
     setCalculating(true);
 
     try {
       const year = new Date().getFullYear();
-      const results = await calculateAllEmployeesPayroll(selectedMonth, year);
+      const results = await calculateAllEmployeesPayroll(selectedMonth, year, adminId);
 
       if (results.length === 0) {
         setError("فشل حساب الرواتب");
@@ -68,11 +72,12 @@ export default function PayrollSection() {
 
   // جلب رواتب الشهر المحدد
   const handleFetchPayroll = async () => {
+    if (!adminId) return;
     setError("");
     setLoading(true);
 
     try {
-      const data = await fetchMonthlyPayroll(selectedMonth);
+      const data = await fetchMonthlyPayroll(selectedMonth, adminId);
       setPayrollData(data as PayrollRecord[]);
     } catch (err: any) {
       setError(err.message);
@@ -82,8 +87,10 @@ export default function PayrollSection() {
   };
 
   useEffect(() => {
-    handleFetchPayroll();
-  }, [selectedMonth]);
+    if (adminId) {
+      handleFetchPayroll();
+    }
+  }, [selectedMonth, adminId]);
 
   const totalSalaries = payrollData.reduce((sum, p) => sum + p.salary, 0);
   const totalHours = payrollData.reduce((sum, p) => sum + p.total_hours, 0);
@@ -162,15 +169,15 @@ export default function PayrollSection() {
 
         <button
           onClick={handleCalculatePayroll}
-          disabled={calculating}
+          disabled={calculating || !adminId}
           style={{
             padding: 10,
             marginTop: 25,
-            backgroundColor: calculating ? "#bdc3c7" : "#27ae60",
+            backgroundColor: (calculating || !adminId) ? "#bdc3c7" : "#27ae60",
             color: "white",
             border: "none",
             borderRadius: 4,
-            cursor: calculating ? "not-allowed" : "pointer",
+            cursor: (calculating || !adminId) ? "not-allowed" : "pointer",
           }}
         >
           {calculating ? "⏳ جاري الحساب..." : "🧮 حساب الرواتب"}
@@ -178,15 +185,15 @@ export default function PayrollSection() {
 
         <button
           onClick={handleFetchPayroll}
-          disabled={loading}
+          disabled={loading || !adminId}
           style={{
             padding: 10,
             marginTop: 25,
-            backgroundColor: loading ? "#bdc3c7" : "#3498db",
+            backgroundColor: (loading || !adminId) ? "#bdc3c7" : "#3498db",
             color: "white",
             border: "none",
             borderRadius: 4,
-            cursor: loading ? "not-allowed" : "pointer",
+            cursor: (loading || !adminId) ? "not-allowed" : "pointer",
           }}
         >
           {loading ? "⏳ جاري التحديث..." : "🔄 تحديث"}
@@ -233,7 +240,7 @@ export default function PayrollSection() {
                 <th style={{ padding: 12, border: "1px solid #ddd", textAlign: "right" }}>الراتب الشهري الأساسي</th>
                 <th style={{ padding: 12, border: "1px solid #ddd", textAlign: "right" }}>الراتب المستحق</th>
                 <th style={{ padding: 12, border: "1px solid #ddd", textAlign: "right" }}>النسبة المئوية</th>
-               </tr>
+                </tr>
             </thead>
             <tbody>
               {payrollData.map((record) => {

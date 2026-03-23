@@ -13,7 +13,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // جلب بيانات المدير من قاعدة البيانات
     const { data: admin, error } = await supabase
       .from('admins')
       .select('id, email, password_hash')
@@ -27,7 +26,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // مقارنة كلمة المرور
     const isValid = await bcrypt.compare(password, admin.password_hash);
     if (!isValid) {
       return NextResponse.json(
@@ -36,13 +34,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // إنشاء جلسة (كوكي آمن)
-    const response = NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true, adminId: admin.id });
     response.cookies.set('admin_session', 'authenticated', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 60 * 60 * 24 // يوم واحد
+      maxAge: 60 * 60 * 24
+    });
+    response.cookies.set('admin_id', admin.id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24
     });
 
     return response;
