@@ -1,129 +1,131 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { supabase } from "../lib/supabase"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import { useRouter } from "next/navigation";
 
 type Employee = {
-  id: string
-  name: string
-  phone?: string
-  role?: string
-  pin: string
-}
+  id: string;
+  name: string;
+  phone?: string;
+  role?: string;
+  pin: string;
+  admin_id?: string; // ← أضفنا admin_id
+};
 
 export default function EmployeeLoginPage() {
-  const router = useRouter()
-  const [pinInput, setPinInput] = useState<string>("")
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string>("")
-  const [success, setSuccess] = useState<string>("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [loginAttempts, setLoginAttempts] = useState(0)
-  const [isLocked, setIsLocked] = useState(false)
-  const [lockTimer, setLockTimer] = useState(0)
+  const router = useRouter();
+  const [pinInput, setPinInput] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockTimer, setLockTimer] = useState(0);
 
   // ✅ تنظيف البيانات القديمة عند فتح صفحة تسجيل الدخول
   useEffect(() => {
-    console.log("🔄 Clearing old session...")
-    localStorage.removeItem("user")
-    localStorage.removeItem("rememberMe")
-    console.log("✅ Old session cleared")
-  }, [])
+    console.log("🔄 Clearing old session...");
+    localStorage.removeItem("user");
+    localStorage.removeItem("rememberMe");
+    console.log("✅ Old session cleared");
+  }, []);
 
   // ✅ مؤقت القفل
   useEffect(() => {
     if (isLocked && lockTimer > 0) {
       const timer = setTimeout(() => {
-        setLockTimer(lockTimer - 1)
-      }, 1000)
-      return () => clearTimeout(timer)
+        setLockTimer(lockTimer - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
     }
 
     if (lockTimer === 0 && isLocked) {
-      setIsLocked(false)
-      setLoginAttempts(0)
+      setIsLocked(false);
+      setLoginAttempts(0);
     }
-  }, [isLocked, lockTimer])
+  }, [isLocked, lockTimer]);
 
   // ✅ تسجيل الدخول
   const login = async () => {
-    setError("")
-    setSuccess("")
+    setError("");
+    setSuccess("");
 
     if (isLocked) {
-      setError(`❌ تم قفل الحساب مؤقتاً. يرجى الانتظار ${lockTimer} ثانية`)
-      return
+      setError(`❌ تم قفل الحساب مؤقتاً. يرجى الانتظار ${lockTimer} ثانية`);
+      return;
     }
 
     if (!pinInput.trim()) {
-      setError("❌ أدخل PIN")
-      return
+      setError("❌ أدخل PIN");
+      return;
     }
 
     if (pinInput.trim().length < 4) {
-      setError("❌ PIN يجب أن يكون 4 أرقام على الأقل")
-      return
+      setError("❌ PIN يجب أن يكون 4 أرقام على الأقل");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
-      const startTime = performance.now()
-      console.log("🔄 Attempting login with PIN:", pinInput.trim())
+      const startTime = performance.now();
+      console.log("🔄 Attempting login with PIN:", pinInput.trim());
 
       const { data, error } = await supabase
         .from("employees")
-        .select("id, name, phone, role, pin")
+        .select("id, name, phone, role, pin, admin_id") // ← أضفنا admin_id
         .eq("pin", pinInput.trim())
-        .single()
+        .single();
 
-      const endTime = performance.now()
-      console.log(`✅ Login query took ${(endTime - startTime).toFixed(2)}ms`)
+      const endTime = performance.now();
+      console.log(`✅ Login query took ${(endTime - startTime).toFixed(2)}ms`);
 
       if (error) {
-        console.error("❌ Login error:", error)
-        const newAttempts = loginAttempts + 1
+        console.error("❌ Login error:", error);
+        const newAttempts = loginAttempts + 1;
 
         if (newAttempts >= 5) {
-          setIsLocked(true)
-          setLockTimer(300) // 5 دقائق
-          setError("❌ تم قفل الحساب لمدة 5 دقائق بسبب محاولات خاطئة متكررة")
+          setIsLocked(true);
+          setLockTimer(300); // 5 دقائق
+          setError("❌ تم قفل الحساب لمدة 5 دقائق بسبب محاولات خاطئة متكررة");
         } else {
-          setError(`❌ PIN غير صحيح (محاولة ${newAttempts}/5)`)
+          setError(`❌ PIN غير صحيح (محاولة ${newAttempts}/5)`);
         }
 
-        setLoginAttempts(newAttempts)
-        return
+        setLoginAttempts(newAttempts);
+        return;
       }
 
       if (!data || !data.id) {
-        throw new Error("لم يتم العثور على الموظف")
+        throw new Error("لم يتم العثور على الموظف");
       }
 
-      const employee = data as Employee
-      console.log("✅ Login successful for:", employee.name, employee.id)
+      const employee = data as Employee;
+      console.log("✅ Login successful for:", employee.name, employee.id);
+      console.log("✅ Admin ID:", employee.admin_id);
 
-      // حفظ البيانات
-      localStorage.setItem("user", JSON.stringify(employee))
-      console.log("✅ User data saved to localStorage")
+      // حفظ البيانات (بما فيها admin_id)
+      localStorage.setItem("user", JSON.stringify(employee));
+      console.log("✅ User data saved to localStorage");
 
-      setSuccess(`✅ مرحباً ${employee.name}`)
-      setPinInput("")
-      setLoginAttempts(0)
+      setSuccess(`✅ مرحباً ${employee.name}`);
+      setPinInput("");
+      setLoginAttempts(0);
 
       // إعادة التوجيه بعد ثانية واحدة
       setTimeout(() => {
-        console.log("🔄 Redirecting to employee page...")
-        router.push("/employee")
-      }, 1000)
+        console.log("🔄 Redirecting to employee page...");
+        router.push("/employee");
+      }, 1000);
     } catch (err: any) {
-      console.error("❌ Login failed:", err)
-      setError(err.message || "❌ حدث خطأ في تسجيل الدخول")
+      console.error("❌ Login failed:", err);
+      setError(err.message || "❌ حدث خطأ في تسجيل الدخول");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div
@@ -220,12 +222,12 @@ export default function EmployeeLoginPage() {
               placeholder="أدخل 4 أرقام أو أكثر"
               value={pinInput}
               onChange={(e) => {
-                setPinInput(e.target.value)
-                setError("")
+                setPinInput(e.target.value);
+                setError("");
               }}
               onKeyPress={(e) => {
                 if (e.key === "Enter" && !loading && !isLocked) {
-                  login()
+                  login();
                 }
               }}
               disabled={loading || isLocked}
@@ -246,12 +248,12 @@ export default function EmployeeLoginPage() {
                 fontWeight: "bold",
               }}
               onFocus={(e) => {
-                e.currentTarget.style.borderColor = "#3498db"
-                e.currentTarget.style.boxShadow = "0 0 8px rgba(52, 152, 219, 0.2)"
+                e.currentTarget.style.borderColor = "#3498db";
+                e.currentTarget.style.boxShadow = "0 0 8px rgba(52, 152, 219, 0.2)";
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = error ? "#ff6b6b" : "#e0e0e0"
-                e.currentTarget.style.boxShadow = "none"
+                e.currentTarget.style.borderColor = error ? "#ff6b6b" : "#e0e0e0";
+                e.currentTarget.style.boxShadow = "none";
               }}
             />
             <button
@@ -313,12 +315,12 @@ export default function EmployeeLoginPage() {
           }}
           onMouseEnter={(e) => {
             if (!loading && pinInput.trim() && !isLocked) {
-              e.currentTarget.style.backgroundColor = "#229954"
+              e.currentTarget.style.backgroundColor = "#229954";
             }
           }}
           onMouseLeave={(e) => {
             if (!loading && pinInput.trim() && !isLocked) {
-              e.currentTarget.style.backgroundColor = "#27ae60"
+              e.currentTarget.style.backgroundColor = "#27ae60";
             }
           }}
         >
@@ -353,5 +355,5 @@ export default function EmployeeLoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

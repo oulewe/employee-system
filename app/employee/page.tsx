@@ -1,101 +1,102 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { supabase } from "../lib/supabase"
-import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+import { useRouter } from "next/navigation";
 
 type Employee = {
-  id: string
-  name: string
-  phone?: string
-  role?: string
-  pin: string
-}
+  id: string;
+  name: string;
+  phone?: string;
+  role?: string;
+  pin: string;
+  admin_id?: string; // ← أضفنا admin_id
+};
 
 type AttendanceRecord = {
-  id: string
-  employee_id: string
-  check_in: string
-  check_out: string | null
-}
+  id: string;
+  employee_id: string;
+  check_in: string;
+  check_out: string | null;
+};
 
 export default function EmployeePage() {
-  const router = useRouter()
-  const [user, setUser] = useState<Employee | null>(null)
-  const [pinInput, setPinInput] = useState<string>("")
-  const [image, setImage] = useState<File | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [currentCheckIn, setCurrentCheckIn] = useState<AttendanceRecord | null>(null)
-  const [imagePreview, setImagePreview] = useState<string>("")
-  const [error, setError] = useState<string>("")
-  const [success, setSuccess] = useState<string>("")
-  const [locationError, setLocationError] = useState<string>("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [debugInfo, setDebugInfo] = useState<string>("")
+  const router = useRouter();
+  const [user, setUser] = useState<Employee | null>(null);
+  const [pinInput, setPinInput] = useState<string>("");
+  const [image, setImage] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [currentCheckIn, setCurrentCheckIn] = useState<AttendanceRecord | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
+  const [locationError, setLocationError] = useState<string>("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string>("");
   const [todayStats, setTodayStats] = useState({
     checkInTime: "",
     checkOutTime: "",
     totalHours: 0,
-  })
+  });
 
   // ✅ تحميل بيانات الموظف من localStorage
   useEffect(() => {
-    const stored = localStorage.getItem("user")
+    const stored = localStorage.getItem("user");
     if (stored) {
       try {
-        const parsedUser = JSON.parse(stored)
-        console.log("✅ User loaded from localStorage:", parsedUser.id)
-        console.log("✅ User data:", parsedUser)
-        setUser(parsedUser)
-        setDebugInfo(`User ID: ${parsedUser.id}`)
-        
+        const parsedUser = JSON.parse(stored);
+        console.log("✅ User loaded from localStorage:", parsedUser.id);
+        console.log("✅ User data:", parsedUser);
+        setUser(parsedUser);
+        setDebugInfo(`User ID: ${parsedUser.id} | Admin ID: ${parsedUser.admin_id || "غير متوفر"}`);
+
         if (parsedUser.id) {
-          checkOpenAttendance(parsedUser.id)
-          loadTodayStats(parsedUser.id)
+          checkOpenAttendance(parsedUser.id);
+          loadTodayStats(parsedUser.id);
         }
       } catch (err) {
-        console.error("❌ Error parsing stored user:", err)
-        localStorage.removeItem("user")
+        console.error("❌ Error parsing stored user:", err);
+        localStorage.removeItem("user");
       }
     }
-  }, [])
+  }, []);
 
   // ✅ التحقق من وجود تسجيل حضور مفتوح
   const checkOpenAttendance = async (employeeId: string) => {
     try {
-      console.log("🔍 Checking open attendance for:", employeeId)
-      
+      console.log("🔍 Checking open attendance for:", employeeId);
+
       const { data, error } = await supabase
         .from("attendance")
         .select("id, employee_id, check_in, check_out")
         .eq("employee_id", employeeId)
         .is("check_out", null)
-        .limit(1)
+        .limit(1);
 
       if (error) {
-        console.error("❌ Error checking attendance:", error)
-        throw error
+        console.error("❌ Error checking attendance:", error);
+        throw error;
       }
 
       if (data && data.length > 0) {
-        setCurrentCheckIn(data[0] as AttendanceRecord)
-        console.log("✅ Open attendance found:", data[0].id)
+        setCurrentCheckIn(data[0] as AttendanceRecord);
+        console.log("✅ Open attendance found:", data[0].id);
       } else {
-        console.log("ℹ️ No open attendance record found")
-        setCurrentCheckIn(null)
+        console.log("ℹ️ No open attendance record found");
+        setCurrentCheckIn(null);
       }
     } catch (err: any) {
-      console.error("❌ Error checking open attendance:", err)
+      console.error("❌ Error checking open attendance:", err);
     }
-  }
+  };
 
   // ✅ تحميل إحصائيات اليوم
   const loadTodayStats = async (employeeId: string) => {
     try {
-      const today = new Date().toISOString().split("T")[0]
-      const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0]
+      const today = new Date().toISOString().split("T")[0];
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
 
-      console.log(`📊 Loading today stats for ${today}`)
+      console.log(`📊 Loading today stats for ${today}`);
 
       const { data, error } = await supabase
         .from("attendance")
@@ -103,357 +104,360 @@ export default function EmployeePage() {
         .eq("employee_id", employeeId)
         .gte("check_in", today)
         .lt("check_in", tomorrow)
-        .order("check_in", { ascending: true })
+        .order("check_in", { ascending: true });
 
-      if (error) throw error
+      if (error) throw error;
 
       if (data && data.length > 0) {
-        const record = data[0]
+        const record = data[0];
         const checkInTime = new Date(record.check_in).toLocaleTimeString("ar-SA", {
           hour: "2-digit",
           minute: "2-digit",
-        })
+        });
         const checkOutTime = record.check_out
           ? new Date(record.check_out).toLocaleTimeString("ar-SA", {
               hour: "2-digit",
               minute: "2-digit",
             })
-          : "-"
+          : "-";
 
-        let totalHours = 0
+        let totalHours = 0;
         if (record.check_out) {
-          const start = new Date(record.check_in).getTime()
-          const end = new Date(record.check_out).getTime()
-          totalHours = Math.round((end - start) / (1000 * 60 * 60) * 100) / 100
+          const start = new Date(record.check_in).getTime();
+          const end = new Date(record.check_out).getTime();
+          totalHours = Math.round((end - start) / (1000 * 60 * 60) * 100) / 100;
         }
 
         setTodayStats({
           checkInTime,
           checkOutTime,
           totalHours,
-        })
+        });
 
-        console.log("✅ Today stats loaded:", { checkInTime, checkOutTime, totalHours })
+        console.log("✅ Today stats loaded:", { checkInTime, checkOutTime, totalHours });
       }
     } catch (err: any) {
-      console.error("❌ Error loading today stats:", err)
+      console.error("❌ Error loading today stats:", err);
     }
-  }
+  };
 
   // ✅ جلب الموقع الجغرافي
   const getLocation = (): Promise<{ lat: string; lng: string }> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        reject(new Error("GPS غير مدعوم في هذا الجهاز"))
-        return
+        reject(new Error("GPS غير مدعوم في هذا الجهاز"));
+        return;
       }
 
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const { latitude, longitude } = pos.coords
-          console.log("✅ Location acquired:", { latitude, longitude })
+          const { latitude, longitude } = pos.coords;
+          console.log("✅ Location acquired:", { latitude, longitude });
           resolve({
             lat: latitude.toString(),
             lng: longitude.toString(),
-          })
+          });
         },
         (err) => {
-          console.error("❌ Geolocation error:", err)
+          console.error("❌ Geolocation error:", err);
           const errorMsg =
             err.code === 1
               ? "تم رفض الوصول للموقع الجغرافي"
               : err.code === 2
-                ? "تعذر الحصول على الموقع"
-                : "خطأ في الوصول للموقع"
-          setLocationError(errorMsg)
-          reject(new Error(errorMsg))
+              ? "تعذر الحصول على الموقع"
+              : "خطأ في الوصول للموقع";
+          setLocationError(errorMsg);
+          reject(new Error(errorMsg));
         }
-      )
-    })
-  }
+      );
+    });
+  };
 
   // ✅ تسجيل الدخول بواسطة PIN
   const login = async () => {
-    setError("")
-    setSuccess("")
+    setError("");
+    setSuccess("");
 
     if (!pinInput.trim()) {
-      setError("❌ أدخل PIN")
-      return
+      setError("❌ أدخل PIN");
+      return;
     }
 
     if (pinInput.trim().length < 4) {
-      setError("❌ PIN يجب أن يكون 4 أرقام على الأقل")
-      return
+      setError("❌ PIN يجب أن يكون 4 أرقام على الأقل");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
-      const startTime = performance.now()
-      console.log("🔐 Login attempt with PIN:", pinInput.trim())
+      const startTime = performance.now();
+      console.log("🔐 Login attempt with PIN:", pinInput.trim());
 
       const { data, error } = await supabase
         .from("employees")
-        .select("id, name, phone, role, pin")
+        .select("id, name, phone, role, pin, admin_id") // ← أضفنا admin_id
         .eq("pin", pinInput.trim())
-        .single()
+        .single();
 
-      const endTime = performance.now()
-      console.log(`✅ Login query took ${(endTime - startTime).toFixed(2)}ms`)
+      const endTime = performance.now();
+      console.log(`✅ Login query took ${(endTime - startTime).toFixed(2)}ms`);
 
       if (error) {
-        console.error("❌ Login error:", error)
-        throw new Error("PIN غير صحيح")
+        console.error("❌ Login error:", error);
+        throw new Error("PIN غير صحيح");
       }
 
       if (!data || !data.id) {
-        throw new Error("لم يتم العثور على الموظف")
+        throw new Error("لم يتم العثور على الموظف");
       }
 
-      const employee = data as Employee
-      console.log("🔐 Login successful - Employee data:", employee)
-      console.log("🔐 Employee UUID:", employee.id)
+      const employee = data as Employee;
+      console.log("🔐 Login successful - Employee data:", employee);
+      console.log("🔐 Employee UUID:", employee.id);
+      console.log("🔐 Admin ID:", employee.admin_id);
 
-      setUser(employee)
-      localStorage.setItem("user", JSON.stringify(employee))
-      setDebugInfo(`✅ User ID: ${employee.id}`)
-      setSuccess(`✅ مرحباً ${employee.name}`)
-      setPinInput("")
+      setUser(employee);
+      localStorage.setItem("user", JSON.stringify(employee));
+      setDebugInfo(`✅ User ID: ${employee.id} | Admin ID: ${employee.admin_id || "غير متوفر"}`);
+      setSuccess(`✅ مرحباً ${employee.name}`);
+      setPinInput("");
 
       // التحقق من وجود تسجيل حضور مفتوح
-      await checkOpenAttendance(employee.id)
-      await loadTodayStats(employee.id)
+      await checkOpenAttendance(employee.id);
+      await loadTodayStats(employee.id);
     } catch (err: any) {
-      console.error("❌ Login failed:", err)
-      setError(err.message || "❌ حدث خطأ في تسجيل الدخول")
+      console.error("❌ Login failed:", err);
+      setError(err.message || "❌ حدث خطأ في تسجيل الدخول");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // ✅ معالجة اختيار الصورة
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0];
+    if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      setError("❌ حجم الصورة كبير جداً (الحد الأقصى 5MB)")
-      return
+      setError("❌ حجم الصورة كبير جداً (الحد الأقصى 5MB)");
+      return;
     }
 
-    setImage(file)
-    const reader = new FileReader()
+    setImage(file);
+    const reader = new FileReader();
     reader.onloadend = () => {
-      setImagePreview(reader.result as string)
-    }
-    reader.readAsDataURL(file)
-    setError("")
-    console.log("📷 Image selected:", file.name)
-  }
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    setError("");
+    console.log("📷 Image selected:", file.name);
+  };
 
   // ✅ رفع الصورة إلى Supabase Storage
   const uploadImage = async (employeeId: string): Promise<string> => {
-    if (!image) return ""
+    if (!image) return "";
 
     try {
-      const fileName = `${employeeId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.jpg`
-      console.log("📤 Uploading image:", fileName)
+      const fileName = `${employeeId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.jpg`;
+      console.log("📤 Uploading image:", fileName);
 
       const { error: uploadError } = await supabase.storage
         .from("work-images")
-        .upload(fileName, image)
+        .upload(fileName, image);
 
       if (uploadError) {
-        console.error("❌ Upload error:", uploadError)
-        throw new Error("خطأ في رفع الصورة: " + uploadError.message)
+        console.error("❌ Upload error:", uploadError);
+        throw new Error("خطأ في رفع الصورة: " + uploadError.message);
       }
 
-      const { data } = supabase.storage.from("work-images").getPublicUrl(fileName)
-      console.log("✅ Image uploaded:", fileName)
-      return data.publicUrl
+      const { data } = supabase.storage.from("work-images").getPublicUrl(fileName);
+      console.log("✅ Image uploaded:", fileName);
+      return data.publicUrl;
     } catch (err: any) {
-      console.error("❌ Image upload failed:", err)
-      throw new Error("فشل رفع الصورة: " + err.message)
+      console.error("❌ Image upload failed:", err);
+      throw new Error("فشل رفع الصورة: " + err.message);
     }
-  }
+  };
 
   // ✅ تسجيل الحضور
   const checkIn = async () => {
-    setError("")
-    setSuccess("")
+    setError("");
+    setSuccess("");
 
     if (!user) {
-      setError("❌ لم يتم تسجيل الدخول")
-      return
+      setError("❌ لم يتم تسجيل الدخول");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
-      console.log("📍 Check In - Employee ID:", user.id)
+      console.log("📍 Check In - Employee ID:", user.id);
+      console.log("📍 Admin ID:", user.admin_id);
 
       // التحقق من عدم وجود سجل مفتوح
       const { data: existing, error: checkError } = await supabase
         .from("attendance")
         .select("*")
         .eq("employee_id", user.id)
-        .is("check_out", null)
+        .is("check_out", null);
 
       if (checkError) {
-        console.error("❌ Error checking existing attendance:", checkError)
-        throw checkError
+        console.error("❌ Error checking existing attendance:", checkError);
+        throw checkError;
       }
 
       if (existing && existing.length > 0) {
-        setError("❌ أنت مسجل بالفعل، يجب تسجيل الخروج أولاً")
-        setCurrentCheckIn(existing[0] as AttendanceRecord)
-        return
+        setError("❌ أنت مسجل بالفعل، يجب تسجيل الخروج أولاً");
+        setCurrentCheckIn(existing[0] as AttendanceRecord);
+        return;
       }
 
       // جلب الموقع
-      let loc: { lat: string; lng: string }
+      let loc: { lat: string; lng: string };
       try {
-        loc = await getLocation()
+        loc = await getLocation();
       } catch (locErr: any) {
-        console.warn("⚠️ Location error:", locErr)
-        setLocationError(locErr.message)
+        console.warn("⚠️ Location error:", locErr);
+        setLocationError(locErr.message);
         const proceed = window.confirm(
           `${locErr.message}\n\nهل تريد المتابعة بدون موقع جغرافي؟`
-        )
-        if (!proceed) return
+        );
+        if (!proceed) return;
 
-        loc = { lat: "0", lng: "0" }
+        loc = { lat: "0", lng: "0" };
       }
 
-      let imageUrl = ""
+      let imageUrl = "";
       if (image) {
-        imageUrl = await uploadImage(user.id)
+        imageUrl = await uploadImage(user.id);
       }
 
-      // إدراج سجل الحضور
+      // إدراج سجل الحضور مع admin_id
       const attendanceData = {
         employee_id: user.id,
+        admin_id: user.admin_id, // ← أضفنا admin_id
         check_in: new Date().toISOString(),
         latitude: loc.lat,
         longitude: loc.lng,
         image_url: imageUrl || null,
-      }
+      };
 
-      console.log("📤 Inserting attendance record:", attendanceData)
+      console.log("📤 Inserting attendance record:", attendanceData);
 
       const { data: insertedData, error } = await supabase
         .from("attendance")
         .insert([attendanceData])
-        .select("id, employee_id, check_in, check_out")
+        .select("id, employee_id, check_in, check_out");
 
       if (error) {
-        console.error("❌ Insert error:", error)
-        throw error
+        console.error("❌ Insert error:", error);
+        throw error;
       }
 
-      console.log("✅ Attendance record inserted:", insertedData)
-      setSuccess("✅ تم تسجيل الحضور بنجاح")
-      setImage(null)
-      setImagePreview("")
+      console.log("✅ Attendance record inserted:", insertedData);
+      setSuccess("✅ تم تسجيل الحضور بنجاح");
+      setImage(null);
+      setImagePreview("");
 
       if (insertedData && insertedData.length > 0) {
-        setCurrentCheckIn(insertedData[0] as AttendanceRecord)
+        setCurrentCheckIn(insertedData[0] as AttendanceRecord);
       }
 
-      await loadTodayStats(user.id)
+      await loadTodayStats(user.id);
     } catch (err: any) {
-      console.error("❌ Check-in failed:", err)
-      setError(err.message || "❌ حدث خطأ في تسجيل الحضور")
+      console.error("❌ Check-in failed:", err);
+      setError(err.message || "❌ حدث خطأ في تسجيل الحضور");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // ✅ تسجيل الخروج
   const checkOut = async () => {
-    setError("")
-    setSuccess("")
+    setError("");
+    setSuccess("");
 
     if (!user) {
-      setError("❌ لم يتم تسجيل الدخول")
-      return
+      setError("❌ لم يتم تسجيل الدخول");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
-      console.log("🔓 Check Out - Finding record for employee_id:", user.id)
+      console.log("🔓 Check Out - Finding record for employee_id:", user.id);
 
       const { data, error: selectError } = await supabase
         .from("attendance")
         .select("id, employee_id, check_in")
         .eq("employee_id", user.id)
         .is("check_out", null)
-        .limit(1)
+        .limit(1);
 
       if (selectError) {
-        console.error("❌ Error finding attendance:", selectError)
-        throw selectError
+        console.error("❌ Error finding attendance:", selectError);
+        throw selectError;
       }
 
       if (!data || data.length === 0) {
-        console.warn("⚠️ No open attendance record found for:", user.id)
-        setError("❌ لا يوجد تسجيل حضور لتسجيل الخروج")
-        setCurrentCheckIn(null)
-        return
+        console.warn("⚠️ No open attendance record found for:", user.id);
+        setError("❌ لا يوجد تسجيل حضور لتسجيل الخروج");
+        setCurrentCheckIn(null);
+        return;
       }
 
-      console.log("📌 Found attendance record:", data[0])
+      console.log("📌 Found attendance record:", data[0]);
 
-      const attendanceId = data[0].id
-      const checkInTime = new Date(data[0].check_in)
-      const now = new Date()
+      const attendanceId = data[0].id;
+      const checkInTime = new Date(data[0].check_in);
+      const now = new Date();
       const workHours = (
         (now.getTime() - checkInTime.getTime()) /
         (1000 * 60 * 60)
-      ).toFixed(2)
+      ).toFixed(2);
 
-      console.log(`✅ Updating check-out for ID: ${attendanceId}, worked hours: ${workHours}`)
+      console.log(`✅ Updating check-out for ID: ${attendanceId}, worked hours: ${workHours}`);
 
       const { error: updateError } = await supabase
         .from("attendance")
         .update({ check_out: now.toISOString() })
-        .eq("id", attendanceId)
+        .eq("id", attendanceId);
 
       if (updateError) {
-        console.error("❌ Update error:", updateError)
-        throw updateError
+        console.error("❌ Update error:", updateError);
+        throw updateError;
       }
 
-      setSuccess(`✅ تم تسجيل الخروج بنجاح (ساعات العمل: ${workHours}h)`)
-      setCurrentCheckIn(null)
-      console.log("✅ Check-out successful")
+      setSuccess(`✅ تم تسجيل الخروج بنجاح (ساعات العمل: ${workHours}h)`);
+      setCurrentCheckIn(null);
+      console.log("✅ Check-out successful");
 
-      await loadTodayStats(user.id)
+      await loadTodayStats(user.id);
     } catch (err: any) {
-      console.error("❌ Check-out failed:", err)
-      setError(err.message || "❌ حدث خطأ في تسجيل الخروج")
+      console.error("❌ Check-out failed:", err);
+      setError(err.message || "❌ حدث خطأ في تسجيل الخروج");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // ✅ تسجيل الخروج من النظام
   const logout = () => {
     if (window.confirm("هل أنت متأكد من رغبتك في تسجيل الخروج؟")) {
-      setUser(null)
-      localStorage.removeItem("user")
-      setPinInput("")
-      setImage(null)
-      setImagePreview("")
-      setCurrentCheckIn(null)
-      setError("")
-      setSuccess("✅ تم تسجيل الخروج بنجاح")
-      setDebugInfo("")
-      console.log("✅ User logged out")
+      setUser(null);
+      localStorage.removeItem("user");
+      setPinInput("");
+      setImage(null);
+      setImagePreview("");
+      setCurrentCheckIn(null);
+      setError("");
+      setSuccess("✅ تم تسجيل الخروج بنجاح");
+      setDebugInfo("");
+      console.log("✅ User logged out");
     }
-  }
+  };
 
   // ===== واجهة تسجيل الدخول =====
   if (!user) {
@@ -552,12 +556,12 @@ export default function EmployeePage() {
                 placeholder="أدخل 4 أرقام أو أكثر"
                 value={pinInput}
                 onChange={(e) => {
-                  setPinInput(e.target.value)
-                  setError("")
+                  setPinInput(e.target.value);
+                  setError("");
                 }}
                 onKeyPress={(e) => {
                   if (e.key === "Enter" && !loading) {
-                    login()
+                    login();
                   }
                 }}
                 disabled={loading}
@@ -578,12 +582,12 @@ export default function EmployeePage() {
                   fontWeight: "bold",
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "#3498db"
-                  e.currentTarget.style.boxShadow = "0 0 8px rgba(52, 152, 219, 0.2)"
+                  e.currentTarget.style.borderColor = "#3498db";
+                  e.currentTarget.style.boxShadow = "0 0 8px rgba(52, 152, 219, 0.2)";
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = error ? "#ff6b6b" : "#e0e0e0"
-                  e.currentTarget.style.boxShadow = "none"
+                  e.currentTarget.style.borderColor = error ? "#ff6b6b" : "#e0e0e0";
+                  e.currentTarget.style.boxShadow = "none";
                 }}
               />
               <button
@@ -614,34 +618,28 @@ export default function EmployeePage() {
             style={{
               width: "100%",
               padding: 14,
-              backgroundColor:
-                loading || !pinInput.trim() ? "#bdc3c7" : "#27ae60",
+              backgroundColor: loading || !pinInput.trim() ? "#bdc3c7" : "#27ae60",
               color: "white",
               border: "none",
               borderRadius: 8,
               fontSize: 16,
               fontWeight: "bold",
-              cursor:
-                loading || !pinInput.trim() ? "not-allowed" : "pointer",
+              cursor: loading || !pinInput.trim() ? "not-allowed" : "pointer",
               transition: "background-color 0.3s, transform 0.1s",
               marginBottom: 15,
             }}
             onMouseEnter={(e) => {
               if (!loading && pinInput.trim()) {
-                e.currentTarget.style.backgroundColor = "#229954"
+                e.currentTarget.style.backgroundColor = "#229954";
               }
             }}
             onMouseLeave={(e) => {
               if (!loading && pinInput.trim()) {
-                e.currentTarget.style.backgroundColor = "#27ae60"
+                e.currentTarget.style.backgroundColor = "#27ae60";
               }
             }}
           >
-            {loading ? (
-              <span>⏳ جاري التحقق...</span>
-            ) : (
-              <span>🚀 تسجيل الدخول</span>
-            )}
+            {loading ? <span>⏳ جاري التحقق...</span> : <span>🚀 تسجيل الدخول</span>}
           </button>
 
           {/* رسالة مساعدة */}
@@ -666,7 +664,7 @@ export default function EmployeePage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   // ===== واجهة الموظف بعد تسجيل الدخول =====
@@ -701,7 +699,7 @@ export default function EmployeePage() {
             {user.role && `الوظيفة: ${user.role}`}
           </p>
           <p style={{ color: "#0066cc", fontSize: 12, margin: "5px 0 0 0" }}>
-            User ID: {user.id}
+            User ID: {user.id} | Admin ID: {user.admin_id || "غير متوفر"}
           </p>
         </div>
         <button
@@ -717,10 +715,10 @@ export default function EmployeePage() {
             transition: "background-color 0.3s",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "#c0392b"
+            e.currentTarget.style.backgroundColor = "#c0392b";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "#e74c3c"
+            e.currentTarget.style.backgroundColor = "#e74c3c";
           }}
         >
           🚪 خروج
@@ -863,9 +861,7 @@ export default function EmployeePage() {
               ساعات العمل
             </div>
             <div style={{ fontSize: 20, fontWeight: "bold", color: "#27ae60" }}>
-              {todayStats.totalHours > 0
-                ? `${todayStats.totalHours.toFixed(2)}h`
-                : "-"}
+              {todayStats.totalHours > 0 ? `${todayStats.totalHours.toFixed(2)}h` : "-"}
             </div>
           </div>
         </div>
@@ -903,8 +899,8 @@ export default function EmployeePage() {
             </p>
             <button
               onClick={() => {
-                setImage(null)
-                setImagePreview("")
+                setImage(null);
+                setImagePreview("");
               }}
               style={{
                 marginTop: 10,
@@ -961,14 +957,14 @@ export default function EmployeePage() {
           }}
           onMouseEnter={(e) => {
             if (!loading) {
-              e.currentTarget.style.backgroundColor = "#229954"
-              e.currentTarget.style.transform = "scale(1.02)"
+              e.currentTarget.style.backgroundColor = "#229954";
+              e.currentTarget.style.transform = "scale(1.02)";
             }
           }}
           onMouseLeave={(e) => {
             if (!loading) {
-              e.currentTarget.style.backgroundColor = "#28a745"
-              e.currentTarget.style.transform = "scale(1)"
+              e.currentTarget.style.backgroundColor = "#28a745";
+              e.currentTarget.style.transform = "scale(1)";
             }
           }}
         >
@@ -992,14 +988,14 @@ export default function EmployeePage() {
           }}
           onMouseEnter={(e) => {
             if (!loading) {
-              e.currentTarget.style.backgroundColor = "#c82333"
-              e.currentTarget.style.transform = "scale(1.02)"
+              e.currentTarget.style.backgroundColor = "#c82333";
+              e.currentTarget.style.transform = "scale(1.02)";
             }
           }}
           onMouseLeave={(e) => {
             if (!loading) {
-              e.currentTarget.style.backgroundColor = "#dc3545"
-              e.currentTarget.style.transform = "scale(1)"
+              e.currentTarget.style.backgroundColor = "#dc3545";
+              e.currentTarget.style.transform = "scale(1)";
             }
           }}
         >
@@ -1046,5 +1042,5 @@ export default function EmployeePage() {
         </div>
       )}
     </div>
-  )
+  );
 }
