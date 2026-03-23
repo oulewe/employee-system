@@ -48,6 +48,13 @@ export default function AdminPage() {
   const [salary, setSalary] = useState<number>(0);
   const [pin, setPin] = useState("");
 
+  // دالة تسجيل الخروج (مسح الكوكيز وإعادة التوجيه)
+  const logout = () => {
+    document.cookie = 'admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+    document.cookie = 'admin_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+    window.location.href = '/admin/login';
+  };
+
   // قراءة admin_id من الكوكي
   useEffect(() => {
     const id = getCookie('admin_id');
@@ -246,7 +253,23 @@ export default function AdminPage() {
           <h1 style={{ color: "#333", marginBottom: 10 }}>📊 {t("title")}</h1>
           <p style={{ color: "#666" }}>{t("subtitle")}</p>
         </div>
-        <LanguageSwitcher />
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <LanguageSwitcher />
+          <button
+            onClick={logout}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#dc3545",
+              color: "white",
+              border: "none",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontWeight: "bold",
+            }}
+          >
+            🚪 خروج
+          </button>
+        </div>
       </div>
 
       {/* ===== التبويبات ===== */}
