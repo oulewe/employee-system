@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { getCookie } from "cookies-next";
 import { supabase } from "../lib/supabase";
 import PayrollSection from "../components/PayrollSection";
 import LanguageSwitcher from "../components/LanguageSwitcher";
@@ -48,21 +47,22 @@ export default function AdminPage() {
   const [salary, setSalary] = useState<number>(0);
   const [pin, setPin] = useState("");
 
-  // دالة تسجيل الخروج (مسح الكوكيز وإعادة التوجيه)
+  // دالة تسجيل الخروج (مسح الكوكيز و localStorage)
   const logout = () => {
     document.cookie = 'admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
     document.cookie = 'admin_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+    localStorage.removeItem('admin_id');
     window.location.href = '/admin/login';
   };
 
-  // قراءة admin_id من الكوكي
+  // قراءة admin_id من localStorage
   useEffect(() => {
-    const id = getCookie('admin_id');
-    console.log("🔍 Admin ID from cookie:", id);
-    if (id && typeof id === 'string') {
-      setAdminId(id);
+    const storedAdminId = localStorage.getItem('admin_id');
+    console.log("🔍 Admin ID from localStorage:", storedAdminId);
+    if (storedAdminId && typeof storedAdminId === 'string') {
+      setAdminId(storedAdminId);
     } else {
-      console.warn("⚠️ Admin ID not found in cookie. Please log in again.");
+      console.warn("⚠️ Admin ID not found in localStorage. Please log in again.");
     }
   }, []);
 
@@ -134,7 +134,7 @@ export default function AdminPage() {
     }
   };
 
-  // إضافة موظف جديد (محسّنة مع رسائل خطأ)
+  // إضافة موظف جديد
   const addEmployee = async () => {
     console.log("🔍 addEmployee called. adminId =", adminId);
     if (!adminId) {
@@ -163,7 +163,7 @@ export default function AdminPage() {
       const { data, error } = await supabase
         .from("employees")
         .insert([employeeData])
-        .select(); // .select() ليعيد السجل المُضاف
+        .select();
 
       if (error) {
         console.error("❌ Supabase insert error:", error);

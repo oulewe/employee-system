@@ -30,6 +30,14 @@ export default function AdminLoginPage() {
         throw new Error(data.error || t('invalidCredentials'));
       }
 
+      // ✅ تخزين admin_id في localStorage
+      if (data.adminId) {
+        localStorage.setItem('admin_id', data.adminId);
+        console.log("✅ Admin ID saved to localStorage:", data.adminId);
+      } else {
+        console.warn("⚠️ Admin ID not returned from API");
+      }
+
       router.push("/admin");
     } catch (err: any) {
       setError(err.message);
