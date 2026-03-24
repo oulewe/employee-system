@@ -35,17 +35,22 @@ export async function POST(request: Request) {
     }
 
     const response = NextResponse.json({ success: true, adminId: admin.id });
+
+    // كوكي الجلسة: httpOnly وآمن
     response.cookies.set('admin_session', 'authenticated', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 60 * 60 * 24
     });
+
+    // كوكي معرف المدير: يمكن قراءته من JavaScript (httpOnly: false)
     response.cookies.set('admin_id', admin.id, {
-      httpOnly: true,
+      httpOnly: false,  // ← التعديل الأساسي
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 60 * 60 * 24
+      maxAge: 60 * 60 * 24,
+      path: '/'
     });
 
     return response;

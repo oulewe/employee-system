@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { setCookie } from 'cookies-next';
 import { useLocale } from 'next-intl';
+import { useCallback } from 'react';
 
 const locales = [
   { code: 'ar', label: 'العربية' },
@@ -14,10 +15,10 @@ export default function LanguageSwitcher() {
   const router = useRouter();
   const currentLocale = useLocale();
 
-  const switchLanguage = (locale: string) => {
+  const switchLanguage = useCallback((locale: string) => {
     setCookie('NEXT_LOCALE', locale, { path: '/' });
     router.refresh();
-  };
+  }, [router]);
 
   return (
     <select
@@ -28,10 +29,11 @@ export default function LanguageSwitcher() {
         borderRadius: 6,
         border: '1px solid #ccc',
         backgroundColor: 'white',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        fontSize: 14,
       }}
     >
-      {locales.map(loc => (
+      {locales.map((loc) => (
         <option key={loc.code} value={loc.code}>
           {loc.label}
         </option>

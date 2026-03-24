@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import {
   calculateAllEmployeesPayroll,
   fetchMonthlyPayroll,
 } from "../lib/payrollCalculations";
+import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 
 type PayrollRecord = {
   id: string;
@@ -21,9 +24,14 @@ type PayrollRecord = {
   };
 };
 
-// دالة تنسيق العملة (أوقية موريتانية)
-const formatMRU = (amount: number): string => {
-  return new Intl.NumberFormat("ar-MR", {
+const formatCurrency = (amount: number, locale: string): string => {
+  const localeMap: Record<string, string> = {
+    ar: "ar-MR",
+    fr: "fr-MR",
+    en: "en-MR",
+  };
+  const usedLocale = localeMap[locale] || "ar-MR";
+  return new Intl.NumberFormat(usedLocale, {
     style: "currency",
     currency: "MRU",
     minimumFractionDigits: 0,
@@ -36,6 +44,9 @@ interface PayrollSectionProps {
 }
 
 export default function PayrollSection({ adminId }: PayrollSectionProps) {
+  const t = useTranslations("payroll");
+  const locale = useLocale();
+
   const [payrollData, setPayrollData] = useState<PayrollRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
@@ -43,7 +54,6 @@ export default function PayrollSection({ adminId }: PayrollSectionProps) {
   const [success, setSuccess] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
 
-  // حساب رواتب جميع الموظفين
   const handleCalculatePayroll = async () => {
     if (!adminId) return;
     setError("");
@@ -55,22 +65,21 @@ export default function PayrollSection({ adminId }: PayrollSectionProps) {
       const results = await calculateAllEmployeesPayroll(selectedMonth, year, adminId);
 
       if (results.length === 0) {
-        setError("فشل حساب الرواتب");
+        toast.error(t("calculationFailed"));
         return;
       }
 
       const successCount = results.filter((r) => r.success).length;
-      setSuccess(`✅ تم حساب رواتب ${successCount} موظف بنجاح`);
+      toast.success(t("calculationSuccess", { count: successCount }));
 
       await handleFetchPayroll();
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message);
     } finally {
       setCalculating(false);
     }
   };
 
-  // جلب رواتب الشهر المحدد
   const handleFetchPayroll = async () => {
     if (!adminId) return;
     setError("");
@@ -80,88 +89,75 @@ export default function PayrollSection({ adminId }: PayrollSectionProps) {
       const data = await fetchMonthlyPayroll(selectedMonth, adminId);
       setPayrollData(data as PayrollRecord[]);
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (adminId) {
-      handleFetchPayroll();
+  const exportPayrollToExcel = () => {
+    if (payrollData.length === 0) {
+      toast.error("لا توجد بيانات رواتب لتصديرها");
+      return;
     }
+    const dataToExport = payrollData.map(record => ({
+      'الموظف': record.employee?.name,
+      'الساعات المعمول بها': record.total_hours,
+      'الراتب الشهري الأساسي': record.employee?.salary,
+      'الراتب المستحق': record.salary,
+      'النسبة المئوية': record.employee?.salary ? Math.round((record.salary / record.employee.salary) * 100) : 0
+    }));
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Payroll');
+    XLSX.writeFile(wb, `payroll_${selectedMonth}_${new Date().getFullYear()}.xlsx`);
+    toast.success("تم تصدير الرواتب بنجاح");
+  };
+
+  useEffect(() => {
+    if (adminId) handleFetchPayroll();
   }, [selectedMonth, adminId]);
 
   const totalSalaries = payrollData.reduce((sum, p) => sum + p.salary, 0);
   const totalHours = payrollData.reduce((sum, p) => sum + p.total_hours, 0);
 
   return (
-    <div
-      style={{
-        backgroundColor: "white",
-        padding: 20,
-        borderRadius: 12,
-        marginBottom: 20,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-      }}
-    >
-      <h2 style={{ color: "#2c3e50", marginTop: 0, marginBottom: 20 }}>
-        💰 إدارة الرواتب (أوقية موريتانية)
-      </h2>
+    <div className="bg-white p-5 rounded-lg shadow-md">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">💰 {t("title")}</h2>
+        <button
+          onClick={exportPayrollToExcel}
+          className="bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded transition"
+        >
+          📊 تصدير Excel
+        </button>
+      </div>
 
       {error && (
-        <div
-          style={{
-            backgroundColor: "#f8d7da",
-            color: "#721c24",
-            padding: 12,
-            borderRadius: 6,
-            marginBottom: 15,
-          }}
-        >
+        <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
           ❌ {error}
         </div>
       )}
-
       {success && (
-        <div
-          style={{
-            backgroundColor: "#d4edda",
-            color: "#155724",
-            padding: 12,
-            borderRadius: 6,
-            marginBottom: 15,
-          }}
-        >
+        <div className="bg-green-100 text-green-700 p-3 rounded mb-4">
           ✅ {success}
         </div>
       )}
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "200px 1fr 1fr",
-          gap: 15,
-          marginBottom: 20,
-        }}
-      >
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
-          <label style={{ display: "block", marginBottom: 8, fontWeight: "bold" }}>
-            اختر الشهر
-          </label>
+          <label className="block font-bold mb-1">{t("selectMonth")}</label>
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-            style={{
-              width: "100%",
-              padding: 10,
-              border: "1px solid #ddd",
-              borderRadius: 4,
-            }}
+            className="w-full p-2 border border-gray-300 rounded"
           >
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
               <option key={m} value={m}>
-                {new Date(2024, m - 1).toLocaleString("ar-SA", { month: "long" })}
+                {new Date(2024, m - 1).toLocaleString(
+                  locale === "ar" ? "ar-SA" : locale === "fr" ? "fr-FR" : "en-US",
+                  { month: "long" }
+                )}
               </option>
             ))}
           </select>
@@ -170,116 +166,66 @@ export default function PayrollSection({ adminId }: PayrollSectionProps) {
         <button
           onClick={handleCalculatePayroll}
           disabled={calculating || !adminId}
-          style={{
-            padding: 10,
-            marginTop: 25,
-            backgroundColor: (calculating || !adminId) ? "#bdc3c7" : "#27ae60",
-            color: "white",
-            border: "none",
-            borderRadius: 4,
-            cursor: (calculating || !adminId) ? "not-allowed" : "pointer",
-          }}
+          className={`mt-6 p-2 rounded font-bold text-white ${
+            (calculating || !adminId) ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"
+          } transition`}
         >
-          {calculating ? "⏳ جاري الحساب..." : "🧮 حساب الرواتب"}
+          {calculating ? t("calculating") : t("calculateButton")}
         </button>
 
         <button
           onClick={handleFetchPayroll}
           disabled={loading || !adminId}
-          style={{
-            padding: 10,
-            marginTop: 25,
-            backgroundColor: (loading || !adminId) ? "#bdc3c7" : "#3498db",
-            color: "white",
-            border: "none",
-            borderRadius: 4,
-            cursor: (loading || !adminId) ? "not-allowed" : "pointer",
-          }}
+          className={`mt-6 p-2 rounded font-bold text-white ${
+            (loading || !adminId) ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+          } transition`}
         >
-          {loading ? "⏳ جاري التحديث..." : "🔄 تحديث"}
+          {loading ? t("refreshing") : t("refreshButton")}
         </button>
       </div>
 
       {payrollData.length > 0 && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            gap: 15,
-            marginBottom: 20,
-          }}
-        >
-          <div style={{ backgroundColor: "#e8f5e9", padding: 15, borderRadius: 8 }}>
-            <div style={{ fontSize: 12, color: "#666" }}>إجمالي الرواتب</div>
-            <div style={{ fontSize: 20, fontWeight: "bold", color: "#27ae60" }}>
-              {formatMRU(totalSalaries)}
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="bg-green-50 p-3 rounded border border-green-300 text-center">
+            <div className="text-sm text-gray-600">{t("totalSalaries")}</div>
+            <div className="text-xl font-bold text-green-700">{formatCurrency(totalSalaries, locale)}</div>
           </div>
-          <div style={{ backgroundColor: "#e3f2fd", padding: 15, borderRadius: 8 }}>
-            <div style={{ fontSize: 12, color: "#666" }}>إجمالي الساعات</div>
-            <div style={{ fontSize: 20, fontWeight: "bold", color: "#2196f3" }}>
-              {totalHours} ساعة
-            </div>
+          <div className="bg-blue-50 p-3 rounded border border-blue-300 text-center">
+            <div className="text-sm text-gray-600">{t("totalHours")}</div>
+            <div className="text-xl font-bold text-blue-700">{totalHours} {t("hoursUnit")}</div>
           </div>
-          <div style={{ backgroundColor: "#fff3e0", padding: 15, borderRadius: 8 }}>
-            <div style={{ fontSize: 12, color: "#666" }}>عدد الموظفين</div>
-            <div style={{ fontSize: 20, fontWeight: "bold", color: "#ff9800" }}>
-              {payrollData.length} موظف
-            </div>
+          <div className="bg-orange-50 p-3 rounded border border-orange-300 text-center">
+            <div className="text-sm text-gray-600">{t("employeeCount")}</div>
+            <div className="text-xl font-bold text-orange-700">{payrollData.length} {t("employeesUnit")}</div>
           </div>
         </div>
       )}
 
       {payrollData.length > 0 && (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
             <thead>
-              <tr style={{ backgroundColor: "#f0f0f0" }}>
-                <th style={{ padding: 12, border: "1px solid #ddd", textAlign: "right" }}>الموظف</th>
-                <th style={{ padding: 12, border: "1px solid #ddd", textAlign: "right" }}>الساعات المعمول بها</th>
-                <th style={{ padding: 12, border: "1px solid #ddd", textAlign: "right" }}>الراتب الشهري الأساسي</th>
-                <th style={{ padding: 12, border: "1px solid #ddd", textAlign: "right" }}>الراتب المستحق</th>
-                <th style={{ padding: 12, border: "1px solid #ddd", textAlign: "right" }}>النسبة المئوية</th>
-                </tr>
+              <tr className="bg-gray-100">
+                <th className="p-2 border text-right">{t("employeeName")}</th>
+                <th className="p-2 border text-right">{t("workedHours")}</th>
+                <th className="p-2 border text-right">{t("baseSalary")}</th>
+                <th className="p-2 border text-right">{t("earnedSalary")}</th>
+                <th className="p-2 border text-right">{t("percentage")}</th>
+              </tr>
             </thead>
             <tbody>
               {payrollData.map((record) => {
-                const percentage = record.employee?.salary
-                  ? Math.round((record.salary / record.employee.salary) * 100)
-                  : 0;
+                const percentage = record.employee?.salary ? Math.round((record.salary / record.employee.salary) * 100) : 0;
                 return (
-                  <tr key={record.id}>
-                    <td style={{ padding: 12, border: "1px solid #ddd", fontWeight: "bold" }}>
-                      {record.employee?.name}
-                    </td>
-                    <td style={{ padding: 12, border: "1px solid #ddd", textAlign: "center" }}>
-                      {record.total_hours} ساعة
-                    </td>
-                    <td style={{ padding: 12, border: "1px solid #ddd", textAlign: "center", color: "#666" }}>
-                      {formatMRU(record.employee?.salary || 0)}
-                    </td>
-                    <td style={{ padding: 12, border: "1px solid #ddd", textAlign: "center", fontWeight: "bold", color: "#27ae60" }}>
-                      {formatMRU(record.salary)}
-                    </td>
-                    <td
-                      style={{
-                        padding: 12,
-                        border: "1px solid #ddd",
-                        textAlign: "center",
-                        backgroundColor:
-                          percentage >= 100
-                            ? "#d4edda"
-                            : percentage >= 75
-                            ? "#fff3cd"
-                            : "#f8d7da",
-                        color:
-                          percentage >= 100
-                            ? "#155724"
-                            : percentage >= 75
-                            ? "#856404"
-                            : "#721c24",
-                      }}
-                    >
+                  <tr key={record.id} className="border-b">
+                    <td className="p-2 border font-bold">{record.employee?.name}</td>
+                    <td className="p-2 border text-center">{record.total_hours} {t("hoursUnit")}</td>
+                    <td className="p-2 border text-center text-gray-600">{formatCurrency(record.employee?.salary || 0, locale)}</td>
+                    <td className="p-2 border text-center font-bold text-green-700">{formatCurrency(record.salary, locale)}</td>
+                    <td className={`p-2 border text-center font-bold ${
+                      percentage >= 100 ? "bg-green-100 text-green-800" :
+                      percentage >= 75 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"
+                    }`}>
                       {percentage}%
                     </td>
                   </tr>
@@ -291,9 +237,7 @@ export default function PayrollSection({ adminId }: PayrollSectionProps) {
       )}
 
       {payrollData.length === 0 && !loading && (
-        <div style={{ textAlign: "center", color: "#999", padding: 40 }}>
-          📊 لا توجد بيانات رواتب للشهر المحدد
-        </div>
+        <div className="text-center text-gray-500 py-8">📊 {t("noData")}</div>
       )}
     </div>
   );

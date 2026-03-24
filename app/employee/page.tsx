@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useRouter } from "next/navigation";
+import toast from 'react-hot-toast';
 
 type Employee = {
   id: string;
@@ -10,7 +11,7 @@ type Employee = {
   phone?: string;
   role?: string;
   pin: string;
-  admin_id?: string; // ← أضفنا admin_id
+  admin_id?: string;
 };
 
 type AttendanceRecord = {
@@ -28,8 +29,6 @@ export default function EmployeePage() {
   const [loading, setLoading] = useState(false);
   const [currentCheckIn, setCurrentCheckIn] = useState<AttendanceRecord | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
-  const [error, setError] = useState<string>("");
-  const [success, setSuccess] = useState<string>("");
   const [locationError, setLocationError] = useState<string>("");
   const [showPassword, setShowPassword] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string>("");
@@ -175,16 +174,13 @@ export default function EmployeePage() {
 
   // ✅ تسجيل الدخول بواسطة PIN
   const login = async () => {
-    setError("");
-    setSuccess("");
-
     if (!pinInput.trim()) {
-      setError("❌ أدخل PIN");
+      toast.error("❌ أدخل PIN");
       return;
     }
 
     if (pinInput.trim().length < 4) {
-      setError("❌ PIN يجب أن يكون 4 أرقام على الأقل");
+      toast.error("❌ PIN يجب أن يكون 4 أرقام على الأقل");
       return;
     }
 
@@ -196,7 +192,7 @@ export default function EmployeePage() {
 
       const { data, error } = await supabase
         .from("employees")
-        .select("id, name, phone, role, pin, admin_id") // ← أضفنا admin_id
+        .select("id, name, phone, role, pin, admin_id")
         .eq("pin", pinInput.trim())
         .single();
 
@@ -205,11 +201,13 @@ export default function EmployeePage() {
 
       if (error) {
         console.error("❌ Login error:", error);
-        throw new Error("PIN غير صحيح");
+        toast.error("PIN غير صحيح");
+        return;
       }
 
       if (!data || !data.id) {
-        throw new Error("لم يتم العثور على الموظف");
+        toast.error("لم يتم العثور على الموظف");
+        return;
       }
 
       const employee = data as Employee;
@@ -220,15 +218,14 @@ export default function EmployeePage() {
       setUser(employee);
       localStorage.setItem("user", JSON.stringify(employee));
       setDebugInfo(`✅ User ID: ${employee.id} | Admin ID: ${employee.admin_id || "غير متوفر"}`);
-      setSuccess(`✅ مرحباً ${employee.name}`);
+      toast.success(`✅ مرحباً ${employee.name}`);
       setPinInput("");
 
-      // التحقق من وجود تسجيل حضور مفتوح
       await checkOpenAttendance(employee.id);
       await loadTodayStats(employee.id);
     } catch (err: any) {
       console.error("❌ Login failed:", err);
-      setError(err.message || "❌ حدث خطأ في تسجيل الدخول");
+      toast.error(err.message || "❌ حدث خطأ في تسجيل الدخول");
     } finally {
       setLoading(false);
     }
@@ -240,7 +237,7 @@ export default function EmployeePage() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      setError("❌ حجم الصورة كبير جداً (الحد الأقصى 5MB)");
+      toast.error("❌ حجم الصورة كبير جداً (الحد الأقصى 5MB)");
       return;
     }
 
@@ -250,7 +247,6 @@ export default function EmployeePage() {
       setImagePreview(reader.result as string);
     };
     reader.readAsDataURL(file);
-    setError("");
     console.log("📷 Image selected:", file.name);
   };
 
@@ -282,11 +278,8 @@ export default function EmployeePage() {
 
   // ✅ تسجيل الحضور
   const checkIn = async () => {
-    setError("");
-    setSuccess("");
-
     if (!user) {
-      setError("❌ لم يتم تسجيل الدخول");
+      toast.error("❌ لم يتم تسجيل الدخول");
       return;
     }
 
@@ -309,7 +302,7 @@ export default function EmployeePage() {
       }
 
       if (existing && existing.length > 0) {
-        setError("❌ أنت مسجل بالفعل، يجب تسجيل الخروج أولاً");
+        toast.error("❌ أنت مسجل بالفعل، يجب تسجيل الخروج أولاً");
         setCurrentCheckIn(existing[0] as AttendanceRecord);
         return;
       }
@@ -325,7 +318,6 @@ export default function EmployeePage() {
           `${locErr.message}\n\nهل تريد المتابعة بدون موقع جغرافي؟`
         );
         if (!proceed) return;
-
         loc = { lat: "0", lng: "0" };
       }
 
@@ -334,10 +326,9 @@ export default function EmployeePage() {
         imageUrl = await uploadImage(user.id);
       }
 
-      // إدراج سجل الحضور مع admin_id
       const attendanceData = {
         employee_id: user.id,
-        admin_id: user.admin_id, // ← أضفنا admin_id
+        admin_id: user.admin_id,
         check_in: new Date().toISOString(),
         latitude: loc.lat,
         longitude: loc.lng,
@@ -357,7 +348,7 @@ export default function EmployeePage() {
       }
 
       console.log("✅ Attendance record inserted:", insertedData);
-      setSuccess("✅ تم تسجيل الحضور بنجاح");
+      toast.success("✅ تم تسجيل الحضور بنجاح");
       setImage(null);
       setImagePreview("");
 
@@ -368,7 +359,7 @@ export default function EmployeePage() {
       await loadTodayStats(user.id);
     } catch (err: any) {
       console.error("❌ Check-in failed:", err);
-      setError(err.message || "❌ حدث خطأ في تسجيل الحضور");
+      toast.error(err.message || "❌ حدث خطأ في تسجيل الحضور");
     } finally {
       setLoading(false);
     }
@@ -376,11 +367,8 @@ export default function EmployeePage() {
 
   // ✅ تسجيل الخروج
   const checkOut = async () => {
-    setError("");
-    setSuccess("");
-
     if (!user) {
-      setError("❌ لم يتم تسجيل الدخول");
+      toast.error("❌ لم يتم تسجيل الدخول");
       return;
     }
 
@@ -403,7 +391,7 @@ export default function EmployeePage() {
 
       if (!data || data.length === 0) {
         console.warn("⚠️ No open attendance record found for:", user.id);
-        setError("❌ لا يوجد تسجيل حضور لتسجيل الخروج");
+        toast.error("❌ لا يوجد تسجيل حضور لتسجيل الخروج");
         setCurrentCheckIn(null);
         return;
       }
@@ -430,14 +418,14 @@ export default function EmployeePage() {
         throw updateError;
       }
 
-      setSuccess(`✅ تم تسجيل الخروج بنجاح (ساعات العمل: ${workHours}h)`);
+      toast.success(`✅ تم تسجيل الخروج بنجاح (ساعات العمل: ${workHours}h)`);
       setCurrentCheckIn(null);
       console.log("✅ Check-out successful");
 
       await loadTodayStats(user.id);
     } catch (err: any) {
       console.error("❌ Check-out failed:", err);
-      setError(err.message || "❌ حدث خطأ في تسجيل الخروج");
+      toast.error(err.message || "❌ حدث خطأ في تسجيل الخروج");
     } finally {
       setLoading(false);
     }
@@ -452,8 +440,7 @@ export default function EmployeePage() {
       setImage(null);
       setImagePreview("");
       setCurrentCheckIn(null);
-      setError("");
-      setSuccess("✅ تم تسجيل الخروج بنجاح");
+      toast.success("✅ تم تسجيل الخروج بنجاح");
       setDebugInfo("");
       console.log("✅ User logged out");
     }
@@ -484,7 +471,6 @@ export default function EmployeePage() {
             border: "1px solid #e0e0e0",
           }}
         >
-          {/* الشعار والعنوان */}
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <div style={{ fontSize: 48, marginBottom: 15 }}>👤</div>
             <h1 style={{ color: "#2c3e50", marginBottom: 10, fontSize: 28 }}>
@@ -495,49 +481,6 @@ export default function EmployeePage() {
             </p>
           </div>
 
-          {/* رسالة الخطأ */}
-          {error && (
-            <div
-              style={{
-                backgroundColor: "#ffe6e6",
-                color: "#c33",
-                padding: 14,
-                borderRadius: 8,
-                marginBottom: 20,
-                border: "1px solid #ffcccc",
-                fontSize: 14,
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <span style={{ fontSize: 18 }}>❌</span>
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* رسالة النجاح */}
-          {success && (
-            <div
-              style={{
-                backgroundColor: "#e6ffe6",
-                color: "#3c3",
-                padding: 14,
-                borderRadius: 8,
-                marginBottom: 20,
-                border: "1px solid #ccffcc",
-                fontSize: 14,
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <span style={{ fontSize: 18 }}>✅</span>
-              <span>{success}</span>
-            </div>
-          )}
-
-          {/* حقل PIN */}
           <div style={{ marginBottom: 25 }}>
             <label
               style={{
@@ -557,7 +500,6 @@ export default function EmployeePage() {
                 value={pinInput}
                 onChange={(e) => {
                   setPinInput(e.target.value);
-                  setError("");
                 }}
                 onKeyPress={(e) => {
                   if (e.key === "Enter" && !loading) {
@@ -571,7 +513,7 @@ export default function EmployeePage() {
                   width: "100%",
                   padding: "14px 16px",
                   paddingRight: 45,
-                  border: `2px solid ${error ? "#ff6b6b" : "#e0e0e0"}`,
+                  border: `2px solid #e0e0e0`,
                   borderRadius: 8,
                   fontSize: 16,
                   boxSizing: "border-box",
@@ -586,7 +528,7 @@ export default function EmployeePage() {
                   e.currentTarget.style.boxShadow = "0 0 8px rgba(52, 152, 219, 0.2)";
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = error ? "#ff6b6b" : "#e0e0e0";
+                  e.currentTarget.style.borderColor = "#e0e0e0";
                   e.currentTarget.style.boxShadow = "none";
                 }}
               />
@@ -611,7 +553,6 @@ export default function EmployeePage() {
             </div>
           </div>
 
-          {/* زر الدخول */}
           <button
             onClick={login}
             disabled={loading || !pinInput.trim()}
@@ -642,7 +583,6 @@ export default function EmployeePage() {
             {loading ? <span>⏳ جاري التحقق...</span> : <span>🚀 تسجيل الدخول</span>}
           </button>
 
-          {/* رسالة مساعدة */}
           <div
             style={{
               backgroundColor: "#e3f2fd",
@@ -677,7 +617,6 @@ export default function EmployeePage() {
         fontFamily: "Arial, sans-serif",
       }}
     >
-      {/* رأس الصفحة */}
       <div
         style={{
           backgroundColor: "white",
@@ -724,64 +663,6 @@ export default function EmployeePage() {
           🚪 خروج
         </button>
       </div>
-
-      {/* الرسائل */}
-      {error && (
-        <div
-          style={{
-            backgroundColor: "#f8d7da",
-            color: "#721c24",
-            padding: 15,
-            borderRadius: 8,
-            marginBottom: 15,
-            border: "1px solid #f5c6cb",
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <span style={{ fontSize: 18 }}>❌</span>
-          <span>{error}</span>
-        </div>
-      )}
-
-      {success && (
-        <div
-          style={{
-            backgroundColor: "#d4edda",
-            color: "#155724",
-            padding: 15,
-            borderRadius: 8,
-            marginBottom: 15,
-            border: "1px solid #c3e6cb",
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <span style={{ fontSize: 18 }}>✅</span>
-          <span>{success}</span>
-        </div>
-      )}
-
-      {locationError && (
-        <div
-          style={{
-            backgroundColor: "#fff3cd",
-            color: "#856404",
-            padding: 15,
-            borderRadius: 8,
-            marginBottom: 15,
-            border: "1px solid #ffeaa7",
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <span style={{ fontSize: 18 }}>⚠️</span>
-          <span>{locationError}</span>
-        </div>
-      )}
 
       {/* حالة الحضور الحالية */}
       <div

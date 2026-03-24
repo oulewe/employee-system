@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { supabase } from "../lib/supabase";
 import PayrollSection from "../components/PayrollSection";
 import LanguageSwitcher from "../components/LanguageSwitcher";
+import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 
 type Employee = {
   id: string;
@@ -84,6 +86,7 @@ export default function AdminPage() {
       console.log("✅ Employees fetched:", data?.length || 0);
     } catch (err: any) {
       console.error("❌ Error fetching employees:", err);
+      toast.error("خطأ في جلب الموظفين");
     }
   };
 
@@ -131,6 +134,7 @@ export default function AdminPage() {
       console.log("✅ Attendance records fetched:", formatted.length);
     } catch (err: any) {
       console.error("❌ Error fetching attendance:", err);
+      toast.error("خطأ في جلب الحضور");
     }
   };
 
@@ -138,11 +142,11 @@ export default function AdminPage() {
   const addEmployee = async () => {
     console.log("🔍 addEmployee called. adminId =", adminId);
     if (!adminId) {
-      alert("❌ لم يتم العثور على معرف المدير. يرجى تسجيل الخروج والدخول مرة أخرى.");
+      toast.error("❌ لم يتم العثور على معرف المدير. يرجى تسجيل الخروج والدخول مرة أخرى.");
       return;
     }
     if (!name || !phone || !role || !teamName || salary <= 0 || !pin) {
-      alert(t("validationError"));
+      toast.error(t("validationError"));
       return;
     }
 
@@ -167,17 +171,17 @@ export default function AdminPage() {
 
       if (error) {
         console.error("❌ Supabase insert error:", error);
-        alert(`❌ فشل الإضافة: ${error.message}\n${error.details || ''}`);
+        toast.error(`❌ فشل الإضافة: ${error.message}`);
         return;
       }
 
       if (!data || data.length === 0) {
-        alert("❌ تم الإدراج ولكن لم يتم إرجاع البيانات.");
+        toast.error("❌ تم الإدراج ولكن لم يتم إرجاع البيانات.");
         return;
       }
 
       console.log("✅ Employee inserted:", data[0]);
-      alert(t("addSuccess"));
+      toast.success(t("addSuccess"));
       // تفريغ الحقول
       setName("");
       setPhone("");
@@ -190,7 +194,7 @@ export default function AdminPage() {
       await fetchAttendance();
     } catch (err: any) {
       console.error("❌ Unexpected error:", err);
-      alert(`❌ خطأ غير متوقع: ${err.message}`);
+      toast.error(`❌ خطأ غير متوقع: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -201,12 +205,33 @@ export default function AdminPage() {
     setRefreshing(true);
     try {
       await Promise.all([fetchEmployees(), fetchAttendance()]);
-      alert(t("refreshSuccess"));
+      toast.success(t("refreshSuccess"));
     } catch (err: any) {
-      alert(t("refreshError") + err.message);
+      toast.error(t("refreshError") + err.message);
     } finally {
       setRefreshing(false);
     }
+  };
+
+  // تصدير attendance إلى Excel
+  const exportAttendanceToExcel = () => {
+    if (filteredAttendance.length === 0) {
+      toast.error("لا توجد بيانات حضور لتصديرها");
+      return;
+    }
+    const dataToExport = filteredAttendance.map(att => ({
+      'الموظف': att.employee?.name,
+      'الدخول': new Date(att.check_in).toLocaleString(),
+      'الخروج': att.check_out ? new Date(att.check_out).toLocaleString() : 'لم يسجل خروج',
+      'ساعات العمل': calculateWorkHours(att.check_in, att.check_out),
+      'الموقع': att.latitude && att.longitude ? `${att.latitude}, ${att.longitude}` : 'لا يوجد',
+      'الصورة': att.image_url || 'لا توجد'
+    }));
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+    XLSX.writeFile(wb, `attendance_${new Date().toISOString().slice(0,10)}.xlsx`);
+    toast.success("تم تصدير الحضور بنجاح");
   };
 
   // حساب ساعات العمل
@@ -239,33 +264,18 @@ export default function AdminPage() {
   }, [adminId]);
 
   return (
-    <div
-      style={{
-        padding: 20,
-        fontFamily: "Arial",
-        backgroundColor: "#f9f9f9",
-        minHeight: "100vh",
-      }}
-    >
+    <div className="p-5 bg-gray-100 min-h-screen font-sans">
       {/* ===== رأس الصفحة ===== */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 30 }}>
-        <div style={{ textAlign: "center", flex: 1 }}>
-          <h1 style={{ color: "#333", marginBottom: 10 }}>📊 {t("title")}</h1>
-          <p style={{ color: "#666" }}>{t("subtitle")}</p>
+      <div className="flex justify-between items-center mb-8">
+        <div className="text-center flex-1">
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">📊 {t("title")}</h1>
+          <p className="text-gray-600">{t("subtitle")}</p>
         </div>
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <div className="flex gap-2 items-center">
           <LanguageSwitcher />
           <button
             onClick={logout}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#dc3545",
-              color: "white",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontWeight: "bold",
-            }}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition"
           >
             🚪 خروج
           </button>
@@ -273,59 +283,34 @@ export default function AdminPage() {
       </div>
 
       {/* ===== التبويبات ===== */}
-      <div
-        style={{
-          display: "flex",
-          gap: 10,
-          marginBottom: 30,
-          borderBottom: "2px solid #ddd",
-          backgroundColor: "white",
-          padding: "0 20px",
-          borderRadius: "8px 8px 0 0",
-        }}
-      >
+      <div className="flex gap-2 mb-6 bg-white border-b border-gray-200 rounded-t-lg px-4">
         <button
           onClick={() => setActiveTab("employees")}
-          style={{
-            padding: "15px 25px",
-            backgroundColor: activeTab === "employees" ? "#007bff" : "transparent",
-            color: activeTab === "employees" ? "white" : "#666",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 14,
-            fontWeight: "bold",
-            borderBottom: activeTab === "employees" ? "3px solid #007bff" : "none",
-          }}
+          className={`py-3 px-6 font-bold transition ${
+            activeTab === "employees"
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-600 hover:text-blue-500"
+          }`}
         >
           👥 {t("employees")}
         </button>
         <button
           onClick={() => setActiveTab("attendance")}
-          style={{
-            padding: "15px 25px",
-            backgroundColor: activeTab === "attendance" ? "#007bff" : "transparent",
-            color: activeTab === "attendance" ? "white" : "#666",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 14,
-            fontWeight: "bold",
-            borderBottom: activeTab === "attendance" ? "3px solid #007bff" : "none",
-          }}
+          className={`py-3 px-6 font-bold transition ${
+            activeTab === "attendance"
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-600 hover:text-blue-500"
+          }`}
         >
           📍 {t("attendance")}
         </button>
         <button
           onClick={() => setActiveTab("payroll")}
-          style={{
-            padding: "15px 25px",
-            backgroundColor: activeTab === "payroll" ? "#007bff" : "transparent",
-            color: activeTab === "payroll" ? "white" : "#666",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 14,
-            fontWeight: "bold",
-            borderBottom: activeTab === "payroll" ? "3px solid #007bff" : "none",
-          }}
+          className={`py-3 px-6 font-bold transition ${
+            activeTab === "payroll"
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-600 hover:text-blue-500"
+          }`}
         >
           💰 {t("payroll")}
         </button>
@@ -335,182 +320,101 @@ export default function AdminPage() {
       {activeTab === "employees" && (
         <>
           {/* قسم إضافة موظف */}
-          <div
-            style={{
-              backgroundColor: "white",
-              padding: 20,
-              borderRadius: 8,
-              marginBottom: 30,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-            }}
-          >
-            <h2
-              style={{
-                color: "#333",
-                borderBottom: "2px solid #007bff",
-                paddingBottom: 10,
-              }}
-            >
+          <div className="bg-white p-5 rounded-lg shadow-md mb-6">
+            <h2 className="text-xl font-bold border-b-2 border-blue-600 pb-2 mb-4">
               ➕ {t("addEmployee")}
             </h2>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 15,
-                marginTop: 20,
-              }}
-            >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <input
                 type="text"
                 placeholder={t("name")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                style={{
-                  padding: 10,
-                  border: "1px solid #ddd",
-                  borderRadius: 4,
-                  fontSize: 14,
-                }}
+                className="p-2 border border-gray-300 rounded"
               />
               <input
                 type="text"
                 placeholder={t("phone")}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                style={{
-                  padding: 10,
-                  border: "1px solid #ddd",
-                  borderRadius: 4,
-                  fontSize: 14,
-                }}
+                className="p-2 border border-gray-300 rounded"
               />
               <input
                 type="text"
                 placeholder={t("role")}
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                style={{
-                  padding: 10,
-                  border: "1px solid #ddd",
-                  borderRadius: 4,
-                  fontSize: 14,
-                }}
+                className="p-2 border border-gray-300 rounded"
               />
               <input
                 type="text"
                 placeholder={t("team")}
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
-                style={{
-                  padding: 10,
-                  border: "1px solid #ddd",
-                  borderRadius: 4,
-                  fontSize: 14,
-                }}
+                className="p-2 border border-gray-300 rounded"
               />
               <input
                 type="number"
                 placeholder={`${t("salary")} (${currency})`}
                 value={salary}
                 onChange={(e) => setSalary(parseFloat(e.target.value))}
-                style={{
-                  padding: 10,
-                  border: "1px solid #ddd",
-                  borderRadius: 4,
-                  fontSize: 14,
-                }}
+                className="p-2 border border-gray-300 rounded"
               />
               <input
                 type="password"
                 placeholder={t("pin")}
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
-                style={{
-                  padding: 10,
-                  border: "1px solid #ddd",
-                  borderRadius: 4,
-                  fontSize: 14,
-                }}
+                className="p-2 border border-gray-300 rounded"
               />
             </div>
 
             <button
               onClick={addEmployee}
               disabled={loading}
-              style={{
-                marginTop: 20,
-                padding: "12px 30px",
-                backgroundColor: loading ? "#ccc" : "#28a745",
-                color: "white",
-                border: "none",
-                borderRadius: 4,
-                fontSize: 16,
-                fontWeight: "bold",
-                cursor: loading ? "not-allowed" : "pointer",
-                width: "100%",
-              }}
+              className={`w-full py-2 px-4 rounded font-bold text-white ${
+                loading ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"
+              } transition`}
             >
               {loading ? t("loading") : `✅ ${t("save")}`}
             </button>
           </div>
 
           {/* قسم الموظفين */}
-          <div
-            style={{
-              backgroundColor: "white",
-              padding: 20,
-              borderRadius: 8,
-              marginBottom: 30,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-            }}
-          >
-            <h3
-              style={{
-                color: "#333",
-                borderBottom: "2px solid #007bff",
-                paddingBottom: 10,
-              }}
-            >
+          <div className="bg-white p-5 rounded-lg shadow-md">
+            <h3 className="text-lg font-bold border-b-2 border-blue-600 pb-2 mb-4">
               👥 {t("employees")} ({employees.length})
             </h3>
-
-            <div style={{ overflowX: "auto", marginTop: 15 }}>
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  fontSize: 13,
-                }}
-              >
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr style={{ backgroundColor: "#f0f0f0" }}>
-                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("name")}</th>
-                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("phone")}</th>
-                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("role")}</th>
-                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("team")}</th>
-                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("salary")}</th>
-                    <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("pin")}</th>
+                  <tr className="bg-gray-100">
+                    <th className="p-2 border text-right">{t("name")}</th>
+                    <th className="p-2 border text-right">{t("phone")}</th>
+                    <th className="p-2 border text-right">{t("role")}</th>
+                    <th className="p-2 border text-right">{t("team")}</th>
+                    <th className="p-2 border text-right">{t("salary")}</th>
+                    <th className="p-2 border text-right">{t("pin")}</th>
                    </tr>
                 </thead>
                 <tbody>
                   {employees.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ padding: 20, textAlign: "center", color: "#999" }}>
+                      <td colSpan={6} className="p-4 text-center text-gray-500">
                         {t("noData")}
                       </td>
                     </tr>
                   ) : (
                     employees.map((emp) => (
-                      <tr key={emp.id} style={{ borderBottom: "1px solid #eee" }}>
-                        <td style={{ padding: 10, border: "1px solid #ddd" }}>{emp.name}</td>
-                        <td style={{ padding: 10, border: "1px solid #ddd" }}>{emp.phone}</td>
-                        <td style={{ padding: 10, border: "1px solid #ddd" }}>{emp.role}</td>
-                        <td style={{ padding: 10, border: "1px solid #ddd" }}>{emp.team_name}</td>
-                        <td style={{ padding: 10, border: "1px solid #ddd" }}>{emp.salary} {currency}</td>
-                        <td style={{ padding: 10, border: "1px solid #ddd" }}>
-                          <code style={{ backgroundColor: "#f0f0f0", padding: 4, borderRadius: 3 }}>{emp.pin}</code>
+                      <tr key={emp.id} className="border-b">
+                        <td className="p-2 border">{emp.name}</td>
+                        <td className="p-2 border">{emp.phone}</td>
+                        <td className="p-2 border">{emp.role}</td>
+                        <td className="p-2 border">{emp.team_name}</td>
+                        <td className="p-2 border">{emp.salary} {currency}</td>
+                        <td className="p-2 border">
+                          <code className="bg-gray-100 p-1 rounded">{emp.pin}</code>
                         </td>
                       </tr>
                     ))
@@ -521,25 +425,22 @@ export default function AdminPage() {
           </div>
 
           {/* إحصائيات */}
-          <div
-            style={{
-              marginTop: 30,
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: 15,
-            }}
-          >
-            <div style={{ backgroundColor: "#e3f2fd", padding: 20, borderRadius: 8, textAlign: "center" }}>
-              <div style={{ fontSize: 24, fontWeight: "bold", color: "#1976d2" }}>{employees.length}</div>
-              <div style={{ color: "#666", marginTop: 5 }}>{t("totalEmployees")}</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <div className="bg-blue-100 p-4 rounded-lg text-center">
+              <div className="text-2xl font-bold text-blue-800">{employees.length}</div>
+              <div className="text-gray-700">{t("totalEmployees")}</div>
             </div>
-            <div style={{ backgroundColor: "#f3e5f5", padding: 20, borderRadius: 8, textAlign: "center" }}>
-              <div style={{ fontSize: 24, fontWeight: "bold", color: "#7b1fa2" }}>{attendance.filter((a) => !a.check_out).length}</div>
-              <div style={{ color: "#666", marginTop: 5 }}>{t("currentlyWorking")}</div>
+            <div className="bg-purple-100 p-4 rounded-lg text-center">
+              <div className="text-2xl font-bold text-purple-800">
+                {attendance.filter((a) => !a.check_out).length}
+              </div>
+              <div className="text-gray-700">{t("currentlyWorking")}</div>
             </div>
-            <div style={{ backgroundColor: "#e8f5e9", padding: 20, borderRadius: 8, textAlign: "center" }}>
-              <div style={{ fontSize: 24, fontWeight: "bold", color: "#388e3c" }}>{attendance.filter((a) => a.check_out).length}</div>
-              <div style={{ color: "#666", marginTop: 5 }}>{t("finishedWork")}</div>
+            <div className="bg-green-100 p-4 rounded-lg text-center">
+              <div className="text-2xl font-bold text-green-800">
+                {attendance.filter((a) => a.check_out).length}
+              </div>
+              <div className="text-gray-700">{t("finishedWork")}</div>
             </div>
           </div>
         </>
@@ -547,141 +448,85 @@ export default function AdminPage() {
 
       {/* ===== تبويب الحضور ===== */}
       {activeTab === "attendance" && (
-        <div
-          style={{
-            backgroundColor: "white",
-            padding: 20,
-            borderRadius: 8,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 15,
-            }}
-          >
-            <h3
-              style={{
-                color: "#333",
-                borderBottom: "2px solid #007bff",
-                paddingBottom: 10,
-                flex: 1,
-              }}
-            >
+        <div className="bg-white p-5 rounded-lg shadow-md">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold border-b-2 border-blue-600 pb-2">
               📍 {t("attendanceRecords")} ({filteredAttendance.length})
             </h3>
-            <button
-              onClick={refreshData}
-              disabled={refreshing}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: refreshing ? "#ccc" : "#17a2b8",
-                color: "white",
-                border: "none",
-                borderRadius: 4,
-                cursor: refreshing ? "not-allowed" : "pointer",
-                fontSize: 14,
-                fontWeight: "bold",
-              }}
-            >
-              {refreshing ? `🔄 ${t("refreshing")}` : `🔄 ${t("refresh")}`}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={refreshData}
+                disabled={refreshing}
+                className={`py-1 px-3 rounded text-white ${
+                  refreshing ? "bg-gray-400" : "bg-teal-600 hover:bg-teal-700"
+                } transition`}
+              >
+                {refreshing ? `🔄 ${t("refreshing")}` : `🔄 ${t("refresh")}`}
+              </button>
+              <button
+                onClick={exportAttendanceToExcel}
+                className="bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded transition"
+              >
+                📊 تصدير Excel
+              </button>
+            </div>
           </div>
 
           {/* فلاتر البحث */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 15,
-              marginBottom: 20,
-            }}
-          >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <input
               type="date"
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
-              style={{
-                padding: 10,
-                border: "1px solid #ddd",
-                borderRadius: 4,
-                fontSize: 14,
-              }}
+              className="p-2 border border-gray-300 rounded"
             />
             <input
               type="text"
               placeholder={t("searchEmployee")}
               value={filterEmployee}
               onChange={(e) => setFilterEmployee(e.target.value)}
-              style={{
-                padding: 10,
-                border: "1px solid #ddd",
-                borderRadius: 4,
-                fontSize: 14,
-              }}
+              className="p-2 border border-gray-300 rounded"
             />
           </div>
 
           {/* الجدول */}
-          <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: 13,
-              }}
-            >
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
               <thead>
-                <tr style={{ backgroundColor: "#f0f0f0" }}>
-                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("employee")}</th>
-                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("checkIn")}</th>
-                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("checkOut")}</th>
-                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("workHours")}</th>
-                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("location")}</th>
-                  <th style={{ padding: 10, border: "1px solid #ddd", textAlign: "right" }}>{t("image")}</th>
+                <tr className="bg-gray-100">
+                  <th className="p-2 border text-right">{t("employee")}</th>
+                  <th className="p-2 border text-right">{t("checkIn")}</th>
+                  <th className="p-2 border text-right">{t("checkOut")}</th>
+                  <th className="p-2 border text-right">{t("workHours")}</th>
+                  <th className="p-2 border text-right">{t("location")}</th>
+                  <th className="p-2 border text-right">{t("image")}</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAttendance.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: 20, textAlign: "center", color: "#999" }}>
+                    <td colSpan={6} className="p-4 text-center text-gray-500">
                       {t("noData")}
                     </td>
                   </tr>
                 ) : (
                   filteredAttendance.map((att) => (
-                    <tr key={att.id} style={{ borderBottom: "1px solid #eee" }}>
-                      <td style={{ padding: 10, border: "1px solid #ddd", fontWeight: "bold" }}>
-                        {att.employee?.name ?? t("noData")}
+                    <tr key={att.id} className="border-b">
+                      <td className="p-2 border font-bold">{att.employee?.name ?? t("noData")}</td>
+                      <td className="p-2 border">{new Date(att.check_in).toLocaleString()}</td>
+                      <td className="p-2 border">
+                        {att.check_out ? new Date(att.check_out).toLocaleString() : t("noCheckOut")}
                       </td>
-                      <td style={{ padding: 10, border: "1px solid #ddd" }}>
-                        {new Date(att.check_in).toLocaleString()}
-                      </td>
-                      <td style={{ padding: 10, border: "1px solid #ddd" }}>
-                        {att.check_out
-                          ? new Date(att.check_out).toLocaleString()
-                          : t("noCheckOut")}
-                      </td>
-                      <td
-                        style={{
-                          padding: 10,
-                          border: "1px solid #ddd",
-                          fontWeight: "bold",
-                          color: att.check_out ? "#28a745" : "#ff6b6b",
-                        }}
-                      >
+                      <td className="p-2 border font-bold" style={{ color: att.check_out ? "#28a745" : "#ff6b6b" }}>
                         {calculateWorkHours(att.check_in, att.check_out)}
                       </td>
-                      <td style={{ padding: 10, border: "1px solid #ddd", fontSize: 12 }}>
+                      <td className="p-2 border text-sm">
                         {att.latitude && att.longitude ? (
                           <a
                             href={`https://maps.google.com/?q=${att.latitude},${att.longitude}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{ color: "#007bff", textDecoration: "none" }}
+                            className="text-blue-600 hover:underline"
                           >
                             📍 {t("locationLink")}
                           </a>
@@ -689,14 +534,14 @@ export default function AdminPage() {
                           t("noLocation")
                         )}
                       </td>
-                      <td style={{ padding: 10, border: "1px solid #ddd" }}>
+                      <td className="p-2 border">
                         {att.image_url ? (
                           <a href={att.image_url} target="_blank" rel="noopener noreferrer">
                             <img
                               src={att.image_url}
                               width={50}
                               height={50}
-                              style={{ borderRadius: 4, cursor: "pointer" }}
+                              className="rounded cursor-pointer"
                               alt={t("workImageAlt")}
                             />
                           </a>
