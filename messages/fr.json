@@ -49,6 +49,15 @@
     "loading": "Connexion...",
     "invalidCredentials": "E-mail ou mot de passe incorrect"
   },
+  "reports": {
+    "title": "Rapports avancés",
+    "attendance": "Présence",
+    "payroll": "Paie",
+    "totalHours": "Heures totales",
+    "employeesCount": "Nombre d'employés",
+    "totalSalaries": "Salaires totaux (Ouguiya)",
+    "noData": "Aucune donnée pour la période sélectionnée"
+  },
   "common": {
     "currency": "Ouguiya mauritanien"
   }

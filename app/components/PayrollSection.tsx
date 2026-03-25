@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { getCookie } from "cookies-next";
 import {
   calculateAllEmployeesPayroll,
   fetchMonthlyPayroll,
@@ -24,16 +25,29 @@ type PayrollRecord = {
   };
 };
 
-const formatCurrency = (amount: number, locale: string): string => {
-  const localeMap: Record<string, string> = {
-    ar: "ar-MR",
-    fr: "fr-MR",
-    en: "en-MR",
-  };
-  const usedLocale = localeMap[locale] || "ar-MR";
-  return new Intl.NumberFormat(usedLocale, {
+// دوال تنسيق العملات المختلفة
+const formatMRU = (amount: number): string => {
+  return new Intl.NumberFormat("ar-MR", {
     style: "currency",
     currency: "MRU",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const formatEUR = (amount: number): string => {
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const formatUSD = (amount: number): string => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
@@ -53,6 +67,22 @@ export default function PayrollSection({ adminId }: PayrollSectionProps) {
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [currency, setCurrency] = useState("MRU");
+
+  // قراءة العملة المختارة من الكوكي
+  useEffect(() => {
+    const c = getCookie("currency");
+    if (c && typeof c === "string") {
+      setCurrency(c);
+    }
+  }, []);
+
+  // تنسيق المبلغ حسب العملة المختارة
+  const formatAmount = (amount: number): string => {
+    if (currency === "MRU") return formatMRU(amount);
+    if (currency === "EUR") return formatEUR(amount);
+    return formatUSD(amount);
+  };
 
   const handleCalculatePayroll = async () => {
     if (!adminId) return;
@@ -188,7 +218,7 @@ export default function PayrollSection({ adminId }: PayrollSectionProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div className="bg-green-50 p-3 rounded border border-green-300 text-center">
             <div className="text-sm text-gray-600">{t("totalSalaries")}</div>
-            <div className="text-xl font-bold text-green-700">{formatCurrency(totalSalaries, locale)}</div>
+            <div className="text-xl font-bold text-green-700">{formatAmount(totalSalaries)}</div>
           </div>
           <div className="bg-blue-50 p-3 rounded border border-blue-300 text-center">
             <div className="text-sm text-gray-600">{t("totalHours")}</div>
@@ -211,7 +241,7 @@ export default function PayrollSection({ adminId }: PayrollSectionProps) {
                 <th className="p-2 border text-right">{t("baseSalary")}</th>
                 <th className="p-2 border text-right">{t("earnedSalary")}</th>
                 <th className="p-2 border text-right">{t("percentage")}</th>
-              </tr>
+               </tr>
             </thead>
             <tbody>
               {payrollData.map((record) => {
@@ -220,8 +250,8 @@ export default function PayrollSection({ adminId }: PayrollSectionProps) {
                   <tr key={record.id} className="border-b">
                     <td className="p-2 border font-bold">{record.employee?.name}</td>
                     <td className="p-2 border text-center">{record.total_hours} {t("hoursUnit")}</td>
-                    <td className="p-2 border text-center text-gray-600">{formatCurrency(record.employee?.salary || 0, locale)}</td>
-                    <td className="p-2 border text-center font-bold text-green-700">{formatCurrency(record.salary, locale)}</td>
+                    <td className="p-2 border text-center text-gray-600">{formatAmount(record.employee?.salary || 0)}</td>
+                    <td className="p-2 border text-center font-bold text-green-700">{formatAmount(record.salary)}</td>
                     <td className={`p-2 border text-center font-bold ${
                       percentage >= 100 ? "bg-green-100 text-green-800" :
                       percentage >= 75 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"

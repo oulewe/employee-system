@@ -49,6 +49,15 @@
     "loading": "Logging in...",
     "invalidCredentials": "Invalid email or password"
   },
+  "reports": {
+    "title": "Advanced Reports",
+    "attendance": "Attendance",
+    "payroll": "Payroll",
+    "totalHours": "Total Hours",
+    "employeesCount": "Number of Employees",
+    "totalSalaries": "Total Salaries (Ouguiya)",
+    "noData": "No data available for the selected period"
+  },
   "common": {
     "currency": "Mauritanian Ouguiya"
   }

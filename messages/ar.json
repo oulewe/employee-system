@@ -49,6 +49,15 @@
     "loading": "جاري الدخول...",
     "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة"
   },
+  "reports": {
+    "title": "التقارير المتقدمة",
+    "attendance": "الحضور",
+    "payroll": "الرواتب",
+    "totalHours": "إجمالي الساعات",
+    "employeesCount": "عدد الموظفين",
+    "totalSalaries": "إجمالي الرواتب (أوقية)",
+    "noData": "لا توجد بيانات للفترة المحددة"
+  },
   "common": {
     "currency": "أوقية موريتانية"
   }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { supabase } from "../lib/supabase";
 import PayrollSection from "../components/PayrollSection";
+import ReportsSection from "../components/ReportsSection";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
@@ -40,7 +41,7 @@ export default function AdminPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [filterDate, setFilterDate] = useState("");
   const [filterEmployee, setFilterEmployee] = useState("");
-  const [activeTab, setActiveTab] = useState<"employees" | "attendance" | "payroll">("employees");
+  const [activeTab, setActiveTab] = useState<"employees" | "attendance" | "payroll" | "reports">("employees");
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -314,6 +315,16 @@ export default function AdminPage() {
         >
           💰 {t("payroll")}
         </button>
+        <button
+          onClick={() => setActiveTab("reports")}
+          className={`py-3 px-6 font-bold transition ${
+            activeTab === "reports"
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-600 hover:text-blue-500"
+          }`}
+        >
+          📈 {t("reports")}
+        </button>
       </div>
 
       {/* ===== تبويب الموظفين ===== */}
@@ -560,6 +571,9 @@ export default function AdminPage() {
 
       {/* ===== تبويب الرواتب ===== */}
       {activeTab === "payroll" && <PayrollSection adminId={adminId} />}
+
+      {/* ===== تبويب التقارير المتقدمة ===== */}
+      {activeTab === "reports" && <ReportsSection adminId={adminId} />}
     </div>
   );
 }

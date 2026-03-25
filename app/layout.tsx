@@ -19,6 +19,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Employee System",
   description: "نظام إدارة فرق العمل الميدانية",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
 };
 
 export default async function RootLayout({
