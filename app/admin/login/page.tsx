@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import LanguageSwitcher from "@/app/components/LanguageSwitcher";
 
 export default function AdminLoginPage() {
   const t = useTranslations('login');
@@ -47,91 +48,54 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#f0f2f5",
-        padding: 20,
-      }}
-    >
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-5">
       <form
         onSubmit={handleSubmit}
-        style={{
-          background: "white",
-          padding: 40,
-          borderRadius: 12,
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          width: "100%",
-          maxWidth: 400,
-        }}
+        className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md"
       >
-        <h1 style={{ textAlign: "center", marginBottom: 30 }}>{t('title')}</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-center flex-1 text-gray-800 dark:text-white">
+            {t('title')}
+          </h1>
+          <LanguageSwitcher />
+        </div>
 
         {error && (
-          <div
-            style={{
-              background: "#ffebee",
-              color: "#c62828",
-              padding: 12,
-              borderRadius: 6,
-              marginBottom: 20,
-              textAlign: "center",
-            }}
-          >
+          <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-center">
             {error}
           </div>
         )}
 
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: "block", marginBottom: 8 }}>{t('email')}</label>
+        <div className="mb-4">
+          <label className="block text-gray-700 dark:text-gray-300 mb-2">
+            {t('email')}
+          </label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={{
-              width: "100%",
-              padding: 12,
-              border: "1px solid #ddd",
-              borderRadius: 6,
-              fontSize: 16,
-            }}
+            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
           />
         </div>
 
-        <div style={{ marginBottom: 30 }}>
-          <label style={{ display: "block", marginBottom: 8 }}>{t('password')}</label>
+        <div className="mb-6">
+          <label className="block text-gray-700 dark:text-gray-300 mb-2">
+            {t('password')}
+          </label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={{
-              width: "100%",
-              padding: 12,
-              border: "1px solid #ddd",
-              borderRadius: 6,
-              fontSize: 16,
-            }}
+            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
           />
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          style={{
-            width: "100%",
-            padding: 12,
-            background: loading ? "#ccc" : "#007bff",
-            color: "white",
-            border: "none",
-            borderRadius: 6,
-            fontSize: 16,
-            cursor: loading ? "not-allowed" : "pointer",
-          }}
+          className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition disabled:opacity-50"
         >
           {loading ? t('loading') : t('loginButton')}
         </button>

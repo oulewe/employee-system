@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { useRouter } from "next/navigation";
+import LanguageSwitcher from "@/app/components/LanguageSwitcher";
 
 type Employee = {
   id: string;
@@ -10,7 +11,7 @@ type Employee = {
   phone?: string;
   role?: string;
   pin: string;
-  admin_id?: string; // ← أضفنا admin_id
+  admin_id?: string;
 };
 
 export default function EmployeeLoginPage() {
@@ -24,7 +25,6 @@ export default function EmployeeLoginPage() {
   const [isLocked, setIsLocked] = useState(false);
   const [lockTimer, setLockTimer] = useState(0);
 
-  // ✅ تنظيف البيانات القديمة عند فتح صفحة تسجيل الدخول
   useEffect(() => {
     console.log("🔄 Clearing old session...");
     localStorage.removeItem("user");
@@ -32,7 +32,6 @@ export default function EmployeeLoginPage() {
     console.log("✅ Old session cleared");
   }, []);
 
-  // ✅ مؤقت القفل
   useEffect(() => {
     if (isLocked && lockTimer > 0) {
       const timer = setTimeout(() => {
@@ -40,14 +39,12 @@ export default function EmployeeLoginPage() {
       }, 1000);
       return () => clearTimeout(timer);
     }
-
     if (lockTimer === 0 && isLocked) {
       setIsLocked(false);
       setLoginAttempts(0);
     }
   }, [isLocked, lockTimer]);
 
-  // ✅ تسجيل الدخول
   const login = async () => {
     setError("");
     setSuccess("");
@@ -70,30 +67,21 @@ export default function EmployeeLoginPage() {
     setLoading(true);
 
     try {
-      const startTime = performance.now();
-      console.log("🔄 Attempting login with PIN:", pinInput.trim());
-
       const { data, error } = await supabase
         .from("employees")
-        .select("id, name, phone, role, pin, admin_id") // ← أضفنا admin_id
+        .select("id, name, phone, role, pin, admin_id")
         .eq("pin", pinInput.trim())
         .single();
 
-      const endTime = performance.now();
-      console.log(`✅ Login query took ${(endTime - startTime).toFixed(2)}ms`);
-
       if (error) {
-        console.error("❌ Login error:", error);
         const newAttempts = loginAttempts + 1;
-
         if (newAttempts >= 5) {
           setIsLocked(true);
-          setLockTimer(300); // 5 دقائق
+          setLockTimer(300);
           setError("❌ تم قفل الحساب لمدة 5 دقائق بسبب محاولات خاطئة متكررة");
         } else {
           setError(`❌ PIN غير صحيح (محاولة ${newAttempts}/5)`);
         }
-
         setLoginAttempts(newAttempts);
         return;
       }
@@ -103,24 +91,15 @@ export default function EmployeeLoginPage() {
       }
 
       const employee = data as Employee;
-      console.log("✅ Login successful for:", employee.name, employee.id);
-      console.log("✅ Admin ID:", employee.admin_id);
-
-      // حفظ البيانات (بما فيها admin_id)
       localStorage.setItem("user", JSON.stringify(employee));
-      console.log("✅ User data saved to localStorage");
-
       setSuccess(`✅ مرحباً ${employee.name}`);
       setPinInput("");
       setLoginAttempts(0);
 
-      // إعادة التوجيه بعد ثانية واحدة
       setTimeout(() => {
-        console.log("🔄 Redirecting to employee page...");
         router.push("/employee");
       }, 1000);
     } catch (err: any) {
-      console.error("❌ Login failed:", err);
       setError(err.message || "❌ حدث خطأ في تسجيل الدخول");
     } finally {
       setLoading(false);
@@ -128,95 +107,32 @@ export default function EmployeeLoginPage() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#f0f2f5",
-        padding: 20,
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          backgroundColor: "white",
-          padding: 50,
-          borderRadius: 15,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
-          maxWidth: 450,
-          width: "100%",
-          border: "1px solid #e0e0e0",
-        }}
-      >
-        {/* الشعار والعنوان */}
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ fontSize: 48, marginBottom: 15 }}>👤</div>
-          <h1 style={{ color: "#2c3e50", marginBottom: 10, fontSize: 28 }}>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-5">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-center flex-1 text-gray-800 dark:text-white">
             تسجيل دخول الموظف
           </h1>
-          <p style={{ color: "#7f8c8d", marginBottom: 0, fontSize: 14 }}>
-            أدخل رقم التعريف الخاص بك
-          </p>
+          <LanguageSwitcher />
         </div>
 
-        {/* رسالة الخطأ */}
         {error && (
-          <div
-            style={{
-              backgroundColor: "#ffe6e6",
-              color: "#c33",
-              padding: 14,
-              borderRadius: 8,
-              marginBottom: 20,
-              border: "1px solid #ffcccc",
-              fontSize: 14,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <span style={{ fontSize: 18 }}>❌</span>
-            <span>{error}</span>
+          <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-center">
+            {error}
           </div>
         )}
 
-        {/* رسالة النجاح */}
         {success && (
-          <div
-            style={{
-              backgroundColor: "#e6ffe6",
-              color: "#3c3",
-              padding: 14,
-              borderRadius: 8,
-              marginBottom: 20,
-              border: "1px solid #ccffcc",
-              fontSize: 14,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <span style={{ fontSize: 18 }}>✅</span>
-            <span>{success}</span>
+          <div className="bg-green-100 text-green-700 p-3 rounded mb-4 text-center">
+            {success}
           </div>
         )}
 
-        {/* حقل PIN */}
-        <div style={{ marginBottom: 25 }}>
-          <label
-            style={{
-              display: "block",
-              marginBottom: 8,
-              color: "#2c3e50",
-              fontSize: 14,
-              fontWeight: "bold",
-            }}
-          >
+        <div className="mb-4">
+          <label className="block text-gray-700 dark:text-gray-300 mb-2">
             🔐 رقم التعريف (PIN)
           </label>
-          <div style={{ position: "relative" }}>
+          <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
               placeholder="أدخل 4 أرقام أو أكثر"
@@ -233,125 +149,35 @@ export default function EmployeeLoginPage() {
               disabled={loading || isLocked}
               maxLength={6}
               autoFocus
-              style={{
-                width: "100%",
-                padding: "14px 16px",
-                paddingRight: 45,
-                border: `2px solid ${error ? "#ff6b6b" : "#e0e0e0"}`,
-                borderRadius: 8,
-                fontSize: 16,
-                boxSizing: "border-box",
-                transition: "border-color 0.3s, box-shadow 0.3s",
-                direction: "ltr",
-                textAlign: "center",
-                letterSpacing: 3,
-                fontWeight: "bold",
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = "#3498db";
-                e.currentTarget.style.boxShadow = "0 0 8px rgba(52, 152, 219, 0.2)";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = error ? "#ff6b6b" : "#e0e0e0";
-                e.currentTarget.style.boxShadow = "none";
-              }}
+              className="w-full p-2 pr-10 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-center tracking-wider font-bold"
             />
             <button
               onClick={() => setShowPassword(!showPassword)}
-              style={{
-                position: "absolute",
-                right: 15,
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "none",
-                border: "none",
-                fontSize: 18,
-                cursor: "pointer",
-                color: "#7f8c8d",
-                padding: 5,
-              }}
-              title={showPassword ? "إخفاء" : "عرض"}
+              type="button"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400"
             >
               {showPassword ? "👁️" : "👁️‍🗨️"}
             </button>
           </div>
         </div>
 
-        {/* عرض محاولات الدخول */}
         {loginAttempts > 0 && !isLocked && (
-          <div
-            style={{
-              marginBottom: 20,
-              fontSize: 13,
-              color: "#e67e22",
-              padding: 10,
-              backgroundColor: "#fff3cd",
-              borderRadius: 6,
-              border: "1px solid #ffeaa7",
-            }}
-          >
+          <div className="mb-4 text-sm text-orange-600 dark:text-orange-400 text-center">
             ⚠️ محاولات متبقية: {5 - loginAttempts}/5
           </div>
         )}
 
-        {/* زر الدخول */}
         <button
           onClick={login}
           disabled={loading || !pinInput.trim() || isLocked}
-          style={{
-            width: "100%",
-            padding: 14,
-            backgroundColor:
-              loading || !pinInput.trim() || isLocked ? "#bdc3c7" : "#27ae60",
-            color: "white",
-            border: "none",
-            borderRadius: 8,
-            fontSize: 16,
-            fontWeight: "bold",
-            cursor:
-              loading || !pinInput.trim() || isLocked ? "not-allowed" : "pointer",
-            transition: "background-color 0.3s, transform 0.1s",
-            marginBottom: 15,
-          }}
-          onMouseEnter={(e) => {
-            if (!loading && pinInput.trim() && !isLocked) {
-              e.currentTarget.style.backgroundColor = "#229954";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!loading && pinInput.trim() && !isLocked) {
-              e.currentTarget.style.backgroundColor = "#27ae60";
-            }
-          }}
+          className="w-full py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded transition disabled:opacity-50"
         >
-          {loading ? (
-            <span>⏳ جاري التحقق...</span>
-          ) : isLocked ? (
-            <span>🔒 تم قفل الحساب ({lockTimer}s)</span>
-          ) : (
-            <span>🚀 دخول</span>
-          )}
+          {loading ? "⏳ جاري التحقق..." : isLocked ? `🔒 تم قفل الحساب (${lockTimer}s)` : "🚀 دخول"}
         </button>
 
-        {/* رسالة مساعدة */}
-        <div
-          style={{
-            backgroundColor: "#e3f2fd",
-            padding: 14,
-            borderRadius: 8,
-            fontSize: 12,
-            color: "#1565c0",
-            border: "1px solid #bbdefb",
-            lineHeight: 1.6,
-          }}
-        >
-          <strong>💡 ملاحظات مهمة:</strong>
-          <ul style={{ margin: "8px 0 0 20px", paddingLeft: 0 }}>
-            <li>احتفظ برقم التعريف آمناً</li>
-            <li>5 محاولات خاطئة = قفل لمدة 5 دقائق</li>
-            <li>اضغط Enter للدخول السريع</li>
-            <li>تواصل مع المدير إذا نسيت PIN</li>
-          </ul>
+        <div className="mt-4 text-xs text-center text-gray-500 dark:text-gray-400">
+          <p>💡 احتفظ برقم التعريف آمناً</p>
+          <p>5 محاولات خاطئة = قفل لمدة 5 دقائق</p>
         </div>
       </div>
     </div>
