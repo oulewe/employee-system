@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import toast from 'react-hot-toast';
 
 type Employee = {
@@ -450,50 +451,35 @@ export default function EmployeePage() {
   if (!user) {
     return (
       <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "#f0f2f5",
-          padding: 20,
-          fontFamily: "Arial, sans-serif",
-        }}
+        className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-5"
       >
         <div
-          style={{
-            backgroundColor: "white",
-            padding: 50,
-            borderRadius: 15,
-            boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
-            maxWidth: 450,
-            width: "100%",
-            border: "1px solid #e0e0e0",
-          }}
+          className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md"
         >
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <div style={{ fontSize: 48, marginBottom: 15 }}>👤</div>
-            <h1 style={{ color: "#2c3e50", marginBottom: 10, fontSize: 28 }}>
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <Image 
+                src="https://www.rimatel.mr/images/about/RIMATEL.png"
+                alt="شعار Rimatel"
+                width={60}
+                height={60}
+                className="object-contain"
+                unoptimized
+              />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
               تسجيل دخول الموظف
             </h1>
-            <p style={{ color: "#7f8c8d", marginBottom: 0, fontSize: 14 }}>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">
               أدخل رقم التعريف الخاص بك
             </p>
           </div>
 
-          <div style={{ marginBottom: 25 }}>
-            <label
-              style={{
-                display: "block",
-                marginBottom: 8,
-                color: "#2c3e50",
-                fontSize: 14,
-                fontWeight: "bold",
-              }}
-            >
+          <div className="mb-4">
+            <label className="block text-gray-700 dark:text-gray-300 mb-2 font-bold">
               🔐 رقم التعريف (PIN)
             </label>
-            <div style={{ position: "relative" }}>
+            <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="أدخل 4 أرقام أو أكثر"
@@ -509,44 +495,12 @@ export default function EmployeePage() {
                 disabled={loading}
                 maxLength={6}
                 autoFocus
-                style={{
-                  width: "100%",
-                  padding: "14px 16px",
-                  paddingRight: 45,
-                  border: `2px solid #e0e0e0`,
-                  borderRadius: 8,
-                  fontSize: 16,
-                  boxSizing: "border-box",
-                  transition: "border-color 0.3s, box-shadow 0.3s",
-                  direction: "ltr",
-                  textAlign: "center",
-                  letterSpacing: 3,
-                  fontWeight: "bold",
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "#3498db";
-                  e.currentTarget.style.boxShadow = "0 0 8px rgba(52, 152, 219, 0.2)";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "#e0e0e0";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
+                className="w-full p-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-center tracking-wider font-bold"
               />
               <button
                 onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  position: "absolute",
-                  right: 15,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  background: "none",
-                  border: "none",
-                  fontSize: 18,
-                  cursor: "pointer",
-                  color: "#7f8c8d",
-                  padding: 5,
-                }}
-                title={showPassword ? "إخفاء" : "عرض"}
+                type="button"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400"
               >
                 {showPassword ? "👁️" : "👁️‍🗨️"}
               </button>
@@ -556,51 +510,14 @@ export default function EmployeePage() {
           <button
             onClick={login}
             disabled={loading || !pinInput.trim()}
-            style={{
-              width: "100%",
-              padding: 14,
-              backgroundColor: loading || !pinInput.trim() ? "#bdc3c7" : "#27ae60",
-              color: "white",
-              border: "none",
-              borderRadius: 8,
-              fontSize: 16,
-              fontWeight: "bold",
-              cursor: loading || !pinInput.trim() ? "not-allowed" : "pointer",
-              transition: "background-color 0.3s, transform 0.1s",
-              marginBottom: 15,
-            }}
-            onMouseEnter={(e) => {
-              if (!loading && pinInput.trim()) {
-                e.currentTarget.style.backgroundColor = "#229954";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!loading && pinInput.trim()) {
-                e.currentTarget.style.backgroundColor = "#27ae60";
-              }
-            }}
+            className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition disabled:opacity-50"
           >
-            {loading ? <span>⏳ جاري التحقق...</span> : <span>🚀 تسجيل الدخول</span>}
+            {loading ? "⏳ جاري التحقق..." : "🚀 تسجيل الدخول"}
           </button>
 
-          <div
-            style={{
-              backgroundColor: "#e3f2fd",
-              padding: 14,
-              borderRadius: 8,
-              fontSize: 12,
-              color: "#1565c0",
-              border: "1px solid #bbdefb",
-              lineHeight: 1.6,
-            }}
-          >
-            <strong>💡 ملاحظات مهمة:</strong>
-            <ul style={{ margin: "8px 0 0 20px", paddingLeft: 0 }}>
-              <li>احتفظ برقم التعريف آمناً</li>
-              <li>اضغط Enter للدخول السريع</li>
-              <li>تواصل مع المدير إذا نسيت PIN</li>
-              <li>تأكد من تفعيل GPS للحصول على الموقع الدقيق</li>
-            </ul>
+          <div className="mt-4 text-xs text-center text-gray-500 dark:text-gray-400">
+            <p>💡 احتفظ برقم التعريف آمناً</p>
+            <p>5 محاولات خاطئة = قفل لمدة 5 دقائق</p>
           </div>
         </div>
       </div>
@@ -609,77 +526,49 @@ export default function EmployeePage() {
 
   // ===== واجهة الموظف بعد تسجيل الدخول =====
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#f0f2f5",
-        padding: 20,
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          backgroundColor: "white",
-          padding: 20,
-          borderRadius: 12,
-          marginBottom: 20,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          border: "1px solid #e0e0e0",
-        }}
-      >
-        <div>
-          <h1 style={{ color: "#2c3e50", margin: 0, marginBottom: 5 }}>
-            👋 مرحباً {user.name}
-          </h1>
-          <p style={{ color: "#7f8c8d", margin: 0, fontSize: 14 }}>
-            {user.role && `الوظيفة: ${user.role}`}
-          </p>
-          <p style={{ color: "#0066cc", fontSize: 12, margin: "5px 0 0 0" }}>
-            User ID: {user.id} | Admin ID: {user.admin_id || "غير متوفر"}
-          </p>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-5 font-sans">
+      {/* رأس الصفحة */}
+      <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Image 
+              src="https://www.rimatel.mr/images/about/RIMATEL.png"
+              alt="شعار Rimatel"
+              width={50}
+              height={50}
+              className="object-contain"
+              unoptimized
+            />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">👋 مرحباً {user.name}</h1>
+              <p className="text-gray-600 dark:text-gray-400">{user.role && `الوظيفة: ${user.role}`}</p>
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                User ID: {user.id} | Admin ID: {user.admin_id || "غير متوفر"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={logout}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition"
+          >
+            🚪 خروج
+          </button>
         </div>
-        <button
-          onClick={logout}
-          style={{
-            padding: "10px 20px",
-            backgroundColor: "#e74c3c",
-            color: "white",
-            border: "none",
-            borderRadius: 6,
-            cursor: "pointer",
-            fontWeight: "bold",
-            transition: "background-color 0.3s",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "#c0392b";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "#e74c3c";
-          }}
-        >
-          🚪 خروج
-        </button>
       </div>
 
       {/* حالة الحضور الحالية */}
       <div
-        style={{
-          backgroundColor: currentCheckIn ? "#e8f5e9" : "#f3e5f5",
-          padding: 20,
-          borderRadius: 12,
-          marginBottom: 20,
-          border: `2px solid ${currentCheckIn ? "#4caf50" : "#9c27b0"}`,
-          textAlign: "center",
-        }}
+        className={`p-5 rounded-lg shadow-md mb-6 text-center ${
+          currentCheckIn 
+            ? "bg-green-50 dark:bg-green-900 border border-green-500" 
+            : "bg-purple-50 dark:bg-purple-900 border border-purple-500"
+        }`}
       >
-        <div style={{ fontSize: 28, marginBottom: 15 }}>
+        <div className="text-2xl font-bold mb-2">
           {currentCheckIn ? "🟢 مسجل دخول" : "🔴 غير مسجل دخول"}
         </div>
         {currentCheckIn && (
-          <div style={{ color: "#666", fontSize: 14 }}>
+          <div className="text-gray-600 dark:text-gray-300">
             وقت الدخول: {new Date(currentCheckIn.check_in).toLocaleString("ar-SA")}
           </div>
         )}
@@ -687,61 +576,18 @@ export default function EmployeePage() {
 
       {/* إحصائيات اليوم */}
       {todayStats.checkInTime && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            gap: 15,
-            marginBottom: 20,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#e3f2fd",
-              padding: 15,
-              borderRadius: 8,
-              border: "1px solid #2196f3",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
-              وقت الدخول
-            </div>
-            <div style={{ fontSize: 20, fontWeight: "bold", color: "#2196f3" }}>
-              {todayStats.checkInTime}
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg text-center">
+            <div className="text-sm text-gray-600 dark:text-gray-300 mb-1">وقت الدخول</div>
+            <div className="text-xl font-bold text-blue-600 dark:text-blue-300">{todayStats.checkInTime}</div>
           </div>
-
-          <div
-            style={{
-              backgroundColor: "#fff3e0",
-              padding: 15,
-              borderRadius: 8,
-              border: "1px solid #ff9800",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
-              وقت الخروج
-            </div>
-            <div style={{ fontSize: 20, fontWeight: "bold", color: "#ff9800" }}>
-              {todayStats.checkOutTime}
-            </div>
+          <div className="bg-orange-50 dark:bg-orange-900 p-4 rounded-lg text-center">
+            <div className="text-sm text-gray-600 dark:text-gray-300 mb-1">وقت الخروج</div>
+            <div className="text-xl font-bold text-orange-600 dark:text-orange-300">{todayStats.checkOutTime}</div>
           </div>
-
-          <div
-            style={{
-              backgroundColor: "#e8f5e9",
-              padding: 15,
-              borderRadius: 8,
-              border: "1px solid #4caf50",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
-              ساعات العمل
-            </div>
-            <div style={{ fontSize: 20, fontWeight: "bold", color: "#27ae60" }}>
+          <div className="bg-green-50 dark:bg-green-900 p-4 rounded-lg text-center">
+            <div className="text-sm text-gray-600 dark:text-gray-300 mb-1">ساعات العمل</div>
+            <div className="text-xl font-bold text-green-600 dark:text-green-300">
               {todayStats.totalHours > 0 ? `${todayStats.totalHours.toFixed(2)}h` : "-"}
             </div>
           </div>
@@ -749,50 +595,23 @@ export default function EmployeePage() {
       )}
 
       {/* قسم رفع الصورة */}
-      <div
-        style={{
-          backgroundColor: "white",
-          padding: 20,
-          borderRadius: 12,
-          marginBottom: 20,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-          border: "1px solid #e0e0e0",
-        }}
-      >
-        <h3 style={{ color: "#2c3e50", marginTop: 0, marginBottom: 15 }}>
-          📷 رفع صورة العمل (اختياري)
-        </h3>
+      <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md mb-6">
+        <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-3">📷 رفع صورة العمل (اختياري)</h3>
 
         {imagePreview && (
-          <div style={{ marginBottom: 15, textAlign: "center" }}>
+          <div className="mb-4 text-center">
             <img
               src={imagePreview}
               alt="معاينة الصورة"
-              style={{
-                maxWidth: "100%",
-                maxHeight: 300,
-                borderRadius: 8,
-                border: "2px solid #ddd",
-              }}
+              className="max-w-full max-h-64 rounded-lg border-2 border-gray-300 dark:border-gray-600 mx-auto"
             />
-            <p style={{ color: "green", marginTop: 10 }}>
-              ✅ تم اختيار الصورة: {image?.name}
-            </p>
+            <p className="text-green-600 dark:text-green-400 mt-2">✅ تم اختيار الصورة: {image?.name}</p>
             <button
               onClick={() => {
                 setImage(null);
                 setImagePreview("");
               }}
-              style={{
-                marginTop: 10,
-                padding: "8px 16px",
-                backgroundColor: "#e74c3c",
-                color: "white",
-                border: "none",
-                borderRadius: 4,
-                cursor: "pointer",
-                fontWeight: "bold",
-              }}
+              className="mt-2 bg-red-600 hover:bg-red-700 text-white px-4 py-1 rounded-lg transition"
             >
               ❌ حذف الصورة
             </button>
@@ -804,100 +623,33 @@ export default function EmployeePage() {
           accept="image/*"
           onChange={handleImageSelect}
           disabled={loading}
-          style={{
-            width: "100%",
-            padding: 15,
-            border: "2px dashed #3498db",
-            borderRadius: 8,
-            cursor: loading ? "not-allowed" : "pointer",
-            backgroundColor: "#f9f9f9",
-            fontSize: 14,
-          }}
+          className="w-full p-3 border-2 border-dashed border-blue-500 dark:border-blue-400 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700"
         />
-        <p style={{ fontSize: 12, color: "#7f8c8d", marginTop: 10 }}>
-          الحد الأقصى لحجم الصورة: 5MB
-        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">الحد الأقصى لحجم الصورة: 5MB</p>
       </div>
 
       {/* أزرار الحضور والخروج */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 15, marginBottom: 20 }}>
+      <div className="grid grid-cols-2 gap-4 mb-6">
         <button
           onClick={checkIn}
           disabled={loading}
-          style={{
-            padding: 20,
-            backgroundColor: loading ? "#bdc3c7" : "#28a745",
-            color: "white",
-            border: "none",
-            borderRadius: 8,
-            fontSize: 16,
-            fontWeight: "bold",
-            cursor: loading ? "not-allowed" : "pointer",
-            transition: "background-color 0.3s, transform 0.1s",
-            width: "100%",
-          }}
-          onMouseEnter={(e) => {
-            if (!loading) {
-              e.currentTarget.style.backgroundColor = "#229954";
-              e.currentTarget.style.transform = "scale(1.02)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!loading) {
-              e.currentTarget.style.backgroundColor = "#28a745";
-              e.currentTarget.style.transform = "scale(1)";
-            }
-          }}
+          className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg transition disabled:opacity-50"
         >
           {loading ? "⏳ جاري التسجيل..." : "🟢 تسجيل الحضور"}
         </button>
-
         <button
           onClick={checkOut}
           disabled={loading}
-          style={{
-            padding: 20,
-            backgroundColor: loading ? "#bdc3c7" : "#dc3545",
-            color: "white",
-            border: "none",
-            borderRadius: 8,
-            fontSize: 16,
-            fontWeight: "bold",
-            cursor: loading ? "not-allowed" : "pointer",
-            transition: "background-color 0.3s, transform 0.1s",
-            width: "100%",
-          }}
-          onMouseEnter={(e) => {
-            if (!loading) {
-              e.currentTarget.style.backgroundColor = "#c82333";
-              e.currentTarget.style.transform = "scale(1.02)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!loading) {
-              e.currentTarget.style.backgroundColor = "#dc3545";
-              e.currentTarget.style.transform = "scale(1)";
-            }
-          }}
+          className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-lg transition disabled:opacity-50"
         >
           {loading ? "⏳ جاري التسجيل..." : "🔴 تسجيل الخروج"}
         </button>
       </div>
 
       {/* معلومات المساعدة */}
-      <div
-        style={{
-          backgroundColor: "#e3f2fd",
-          padding: 15,
-          borderRadius: 8,
-          fontSize: 13,
-          color: "#1565c0",
-          border: "1px solid #bbdefb",
-          marginBottom: 15,
-        }}
-      >
-        <strong>💡 نصائح مهمة:</strong>
-        <ul style={{ margin: "10px 0 0 20px" }}>
+      <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg">
+        <strong className="text-blue-800 dark:text-blue-200">💡 نصائح مهمة:</strong>
+        <ul className="mt-2 text-sm text-blue-700 dark:text-blue-300 list-disc list-inside">
           <li>✅ تأكد من تفعيل خدمة GPS قبل تسجيل الحضور</li>
           <li>✅ الصور اختيارية ولكنها تساعد في توثيق العمل</li>
           <li>✅ تسجيل الخروج ضروري لحساب ساعات العمل</li>
@@ -908,18 +660,8 @@ export default function EmployeePage() {
 
       {/* معلومات التصحيح */}
       {debugInfo && (
-        <div
-          style={{
-            backgroundColor: "#f0f0f0",
-            padding: 10,
-            borderRadius: 6,
-            fontSize: 12,
-            color: "#0066cc",
-            border: "1px solid #ddd",
-            marginTop: 15,
-          }}
-        >
-          <strong>ℹ️ معلومات التصحيح:</strong> {debugInfo}
+        <div className="mt-4 p-2 bg-gray-200 dark:bg-gray-700 rounded text-xs text-blue-600 dark:text-blue-400">
+          ℹ️ {debugInfo}
         </div>
       )}
     </div>
