@@ -345,7 +345,7 @@ export default function AdminPage() {
           📈 {t("reports")}
         </button>
         <button
-          onClick={() => router.push("/admin/night-reports")}
+          onClick={() => router.push("/admin/night_reports")}
           className="py-3 px-6 font-bold transition text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400"
         >
           🌙 {t("nightReports") || "التقارير الليلية"}
