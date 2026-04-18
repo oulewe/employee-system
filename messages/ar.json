@@ -58,6 +58,35 @@
     "totalSalaries": "إجمالي الرواتب (أوقية)",
     "noData": "لا توجد بيانات للفترة المحددة"
   },
+  "nightReports": {
+    "title": "التقارير الليلية",
+    "reportingService": "خدمة التقارير الليلية",
+    "stationnee": "سيارة متوقفة",
+    "panne": "سيارة معطلة",
+    "addData": "إضافة بيانات",
+    "pasteData": "الصق البيانات هنا... كل سطر يمثل سجلاً، مفصولاً بفواصل منقوطة ;",
+    "example": "مثال",
+    "save": "حفظ البيانات",
+    "saving": "جاري الحفظ...",
+    "recordsLast24h": "السجلات المسجلة (آخر 24 ساعة)",
+    "exportAll": "تصدير الكل إلى Excel",
+    "successSaved": "✅ تم حفظ {count} سجل",
+    "incompleteRow": "سطر غير مكتمل: {line}",
+    "noData": "لا توجد بيانات",
+    "columns": {
+      "numero": "الرقم",
+      "centre": "المركز",
+      "vehiculeType": "نوع المركبة",
+      "matricule": "رقم التسجيل",
+      "chauffeurName": "اسم السائق",
+      "chauffeurPhone": "رقم هاتف السائق",
+      "natureIntervention": "طبيعة التدخل",
+      "typePoint": "نقطة التدخل",
+      "gps": "إحداثيات GPS",
+      "observation": "ملاحظة",
+      "date": "تاريخ الإنشاء"
+    }
+  },
   "common": {
     "currency": "أوقية موريتانية"
   }

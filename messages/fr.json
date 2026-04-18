@@ -58,6 +58,35 @@
     "totalSalaries": "Salaires totaux (Ouguiya)",
     "noData": "Aucune donnée pour la période sélectionnée"
   },
+  "nightReports": {
+    "title": "Rapports de nuit",
+    "reportingService": "Service de rapport de nuit",
+    "stationnee": "Voiture stationnée",
+    "panne": "Voiture en panne",
+    "addData": "Ajouter des données",
+    "pasteData": "Collez les données ici... Chaque ligne représente un enregistrement, séparé par des points-virgules ;",
+    "example": "Exemple",
+    "save": "Enregistrer les données",
+    "saving": "Enregistrement...",
+    "recordsLast24h": "Enregistrements (dernières 24 heures)",
+    "exportAll": "Tout exporter vers Excel",
+    "successSaved": "✅ {count} enregistrement(s) sauvegardé(s)",
+    "incompleteRow": "Ligne incomplète : {line}",
+    "noData": "Aucune donnée",
+    "columns": {
+      "numero": "N°",
+      "centre": "Centre",
+      "vehiculeType": "Type de véhicule",
+      "matricule": "Immatriculation",
+      "chauffeurName": "Nom du chauffeur",
+      "chauffeurPhone": "Tél du chauffeur",
+      "natureIntervention": "Nature d'intervention",
+      "typePoint": "Type de point",
+      "gps": "Coordonnées GPS",
+      "observation": "Observation",
+      "date": "Date de création"
+    }
+  },
   "common": {
     "currency": "Ouguiya mauritanien"
   }
