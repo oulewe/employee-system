@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import PayrollSection from "../components/PayrollSection";
 import ReportsSection from "../components/ReportsSection";
@@ -34,6 +35,7 @@ type Attendance = {
 };
 
 export default function AdminPage() {
+  const router = useRouter();
   const t = useTranslations('admin');
   const currency = useTranslations('common')('currency');
 
@@ -342,6 +344,12 @@ export default function AdminPage() {
         >
           📈 {t("reports")}
         </button>
+        <button
+          onClick={() => router.push("/admin/night-reports")}
+          className="py-3 px-6 font-bold transition text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400"
+        >
+          🌙 {t("nightReports") || "التقارير الليلية"}
+        </button>
       </div>
 
       {/* ===== تبويب الموظفين ===== */}
@@ -424,7 +432,7 @@ export default function AdminPage() {
                     <th className="p-2 border text-right text-gray-800 dark:text-gray-200">{t("team")}</th>
                     <th className="p-2 border text-right text-gray-800 dark:text-gray-200">{t("salary")}</th>
                     <th className="p-2 border text-right text-gray-800 dark:text-gray-200">{t("pin")}</th>
-                   </tr>
+                   </td>
                 </thead>
                 <tbody>
                   {employees.length === 0 ? (
@@ -444,7 +452,7 @@ export default function AdminPage() {
                         <td className="p-2 border dark:border-gray-700">
                           <code className="bg-gray-100 dark:bg-gray-700 p-1 rounded text-gray-800 dark:text-gray-200">{emp.pin}</code>
                         </td>
-                      </tr>
+                      </td>
                     ))
                   )}
                 </tbody>
