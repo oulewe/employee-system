@@ -34,6 +34,97 @@ type VoitureRecord = {
   created_at: string;
 };
 
+// دالة تحليل سطر Reporting Service
+const parseReportingLine = (line: string) => {
+  // تنظيف السطر: إزالة النجمة والمسافات الزائدة
+  let cleanLine = line.replace(/^\*\s*/, "").trim();
+  const parts = cleanLine.split(/\s+/);
+
+  if (parts.length < 3) return null;
+
+  const vehicule_type = parts[0];
+  const vehicule_matricule = parts[1];
+  let remaining = parts.slice(2).join(" ");
+
+  // استخراج رقم الهاتف
+  let chauffeur_telephone = "";
+  let telIndex = remaining.toLowerCase().indexOf("tel");
+  if (telIndex !== -1) {
+    const telPart = remaining.slice(telIndex).split(/\s+/);
+    chauffeur_telephone = telPart[1] || "";
+    remaining = remaining.slice(0, telIndex).trim();
+  }
+
+  // استخراج اسم السائق
+  let chauffeur_nom = "";
+  let chauffeurIndex = remaining.toLowerCase().indexOf("chauffeur");
+  if (chauffeurIndex !== -1) {
+    chauffeur_nom = remaining.slice(chauffeurIndex + 8).trim();
+    remaining = remaining.slice(0, chauffeurIndex).trim();
+  } else {
+    // إذا لم يذكر "chauffeur"، نعتبر باقي النص هو اسم السائق
+    chauffeur_nom = remaining;
+    remaining = "";
+  }
+
+  // تحديد نوع التدخل
+  const interventionTypes = ["suivi", "FTTH", "dérangement", "SAWI", "BLR"];
+  let nature_intervention = "";
+  for (const it of interventionTypes) {
+    if (remaining.toLowerCase().includes(it.toLowerCase())) {
+      nature_intervention = it;
+      break;
+    }
+  }
+
+  // ملاحظة
+  let observation = remaining.replace(new RegExp(nature_intervention, "i"), "").trim();
+
+  return {
+    vehicule_type,
+    vehicule_matricule,
+    chauffeur_nom,
+    chauffeur_telephone,
+    nature_intervention,
+    observation,
+  };
+};
+
+// دالة تحليل سطر Voiture (Stationnee / Panne)
+const parseVoitureLine = (line: string) => {
+  let cleanLine = line.replace(/^\*\s*/, "").trim();
+  const parts = cleanLine.split(/\s+/);
+
+  if (parts.length < 3) return null;
+
+  const vehicule_type = parts[0];
+  const vehicule_matricule = parts[1];
+  let remaining = parts.slice(2).join(" ");
+
+  let chauffeur_telephone = "";
+  let telIndex = remaining.toLowerCase().indexOf("tel");
+  if (telIndex !== -1) {
+    const telPart = remaining.slice(telIndex).split(/\s+/);
+    chauffeur_telephone = telPart[1] || "";
+    remaining = remaining.slice(0, telIndex).trim();
+  }
+
+  let chauffeur_nom = "";
+  let chauffeurIndex = remaining.toLowerCase().indexOf("chauffeur");
+  if (chauffeurIndex !== -1) {
+    chauffeur_nom = remaining.slice(chauffeurIndex + 8).trim();
+  } else {
+    chauffeur_nom = remaining;
+  }
+
+  return {
+    vehicule_type,
+    vehicule_matricule,
+    chauffeur_nom,
+    chauffeur_telephone,
+  };
+};
+
 export default function NightReportsPage() {
   const t = useTranslations("nightReports");
   const [adminId, setAdminId] = useState<string | null>(null);
@@ -41,14 +132,17 @@ export default function NightReportsPage() {
 
   const [reportingData, setReportingData] = useState<ReportingRecord[]>([]);
   const [reportingInput, setReportingInput] = useState("");
+  const [parsedReporting, setParsedReporting] = useState<any[]>([]);
   const [reportingLoading, setReportingLoading] = useState(false);
 
   const [stationneeData, setStationneeData] = useState<VoitureRecord[]>([]);
   const [stationneeInput, setStationneeInput] = useState("");
+  const [parsedStationnee, setParsedStationnee] = useState<any[]>([]);
   const [stationneeLoading, setStationneeLoading] = useState(false);
 
   const [panneData, setPanneData] = useState<VoitureRecord[]>([]);
   const [panneInput, setPanneInput] = useState("");
+  const [parsedPanne, setParsedPanne] = useState<any[]>([]);
   const [panneLoading, setPanneLoading] = useState(false);
 
   useEffect(() => {
@@ -103,79 +197,112 @@ export default function NightReportsPage() {
     }
   }, [adminId]);
 
-  const handleReportingSubmit = async () => {
+  // تحليل النص عند التغيير (للعرض فقط)
+  const handleReportingInputChange = (value: string) => {
+    setReportingInput(value);
+    const lines = value.split("\n").filter((line) => line.trim());
+    const parsed = lines.map(parseReportingLine).filter((p) => p !== null);
+    setParsedReporting(parsed);
+  };
+
+  const handleStationneeInputChange = (value: string) => {
+    setStationneeInput(value);
+    const lines = value.split("\n").filter((line) => line.trim());
+    const parsed = lines.map(parseVoitureLine).filter((p) => p !== null);
+    setParsedStationnee(parsed);
+  };
+
+  const handlePanneInputChange = (value: string) => {
+    setPanneInput(value);
+    const lines = value.split("\n").filter((line) => line.trim());
+    const parsed = lines.map(parseVoitureLine).filter((p) => p !== null);
+    setParsedPanne(parsed);
+  };
+
+  // حفظ البيانات المحللة
+  const handleSaveReporting = async () => {
     if (!adminId) return;
+    if (parsedReporting.length === 0) {
+      toast.error("لا توجد بيانات للحفظ");
+      return;
+    }
     setReportingLoading(true);
-    const lines = reportingInput.split("\n").filter((line) => line.trim());
     let successCount = 0;
-    for (const line of lines) {
-      const parts = line.split(";").map((p) => p.trim());
-      if (parts.length < 10) {
-        toast.error(t("incompleteRow", { line }));
-        continue;
-      }
-      const [numero, centre, vehicule_type, vehicule_matricule, chauffeur_nom, chauffeur_telephone, nature_intervention, type_point, gps, observation] = parts;
-      let gps_latitude = 0, gps_longitude = 0;
-      if (gps && gps.includes(",")) {
-        const [lat, lng] = gps.split(",");
-        gps_latitude = parseFloat(lat);
-        gps_longitude = parseFloat(lng);
-      }
+    for (const item of parsedReporting) {
       const { error } = await supabase.from("reporting_service_nocturne").insert({
-        numero: parseInt(numero), centre, vehicule_type, vehicule_matricule, chauffeur_nom, chauffeur_telephone,
-        nature_intervention, type_point, gps_latitude, gps_longitude, observation, admin_id: adminId,
+        numero: successCount + 1,
+        centre: "Centre par défaut",
+        vehicule_type: item.vehicule_type,
+        vehicule_matricule: item.vehicule_matricule,
+        chauffeur_nom: item.chauffeur_nom,
+        chauffeur_telephone: item.chauffeur_telephone,
+        nature_intervention: item.nature_intervention || "",
+        type_point: "Non spécifié",
+        gps_latitude: 0,
+        gps_longitude: 0,
+        observation: item.observation || "",
+        admin_id: adminId,
       });
       if (!error) successCount++;
     }
     toast.success(t("successSaved", { count: successCount }));
     setReportingInput("");
-    fetchReportingData();
+    setParsedReporting([]);
+    await fetchReportingData();
     setReportingLoading(false);
   };
 
-  const handleStationneeSubmit = async () => {
+  const handleSaveStationnee = async () => {
     if (!adminId) return;
+    if (parsedStationnee.length === 0) {
+      toast.error("لا توجد بيانات للحفظ");
+      return;
+    }
     setStationneeLoading(true);
-    const lines = stationneeInput.split("\n").filter((line) => line.trim());
     let successCount = 0;
-    for (const line of lines) {
-      const parts = line.split(";").map((p) => p.trim());
-      if (parts.length < 5) {
-        toast.error(t("incompleteRow", { line }));
-        continue;
-      }
-      const [numero, centre, vehicule_type, vehicule_matricule, chauffeur_nom, chauffeur_telephone] = parts;
+    for (const item of parsedStationnee) {
       const { error } = await supabase.from("voiture_stationnee").insert({
-        numero: parseInt(numero), centre, vehicule_type, vehicule_matricule, chauffeur_nom, chauffeur_telephone, admin_id: adminId,
+        numero: successCount + 1,
+        centre: "Centre par défaut",
+        vehicule_type: item.vehicule_type,
+        vehicule_matricule: item.vehicule_matricule,
+        chauffeur_nom: item.chauffeur_nom,
+        chauffeur_telephone: item.chauffeur_telephone,
+        admin_id: adminId,
       });
       if (!error) successCount++;
     }
     toast.success(t("successSaved", { count: successCount }));
     setStationneeInput("");
-    fetchStationneeData();
+    setParsedStationnee([]);
+    await fetchStationneeData();
     setStationneeLoading(false);
   };
 
-  const handlePanneSubmit = async () => {
+  const handleSavePanne = async () => {
     if (!adminId) return;
+    if (parsedPanne.length === 0) {
+      toast.error("لا توجد بيانات للحفظ");
+      return;
+    }
     setPanneLoading(true);
-    const lines = panneInput.split("\n").filter((line) => line.trim());
     let successCount = 0;
-    for (const line of lines) {
-      const parts = line.split(";").map((p) => p.trim());
-      if (parts.length < 5) {
-        toast.error(t("incompleteRow", { line }));
-        continue;
-      }
-      const [numero, centre, vehicule_type, vehicule_matricule, chauffeur_nom, chauffeur_telephone] = parts;
+    for (const item of parsedPanne) {
       const { error } = await supabase.from("voiture_en_panne").insert({
-        numero: parseInt(numero), centre, vehicule_type, vehicule_matricule, chauffeur_nom, chauffeur_telephone, admin_id: adminId,
+        numero: successCount + 1,
+        centre: "Centre par défaut",
+        vehicule_type: item.vehicule_type,
+        vehicule_matricule: item.vehicule_matricule,
+        chauffeur_nom: item.chauffeur_nom,
+        chauffeur_telephone: item.chauffeur_telephone,
+        admin_id: adminId,
       });
       if (!error) successCount++;
     }
     toast.success(t("successSaved", { count: successCount }));
     setPanneInput("");
-    fetchPanneData();
+    setParsedPanne([]);
+    await fetchPanneData();
     setPanneLoading(false);
   };
 
@@ -249,15 +376,49 @@ export default function NightReportsPage() {
           <h2 className="text-xl font-bold mb-4">➕ {t("addData")}</h2>
           <textarea
             rows={6}
-            placeholder={`${t("pasteData")}\n${t("example")}: 1;Centre A;Camion;123-ABC;Ahmed;0612345678;Installation;Client;18.1234,-5.1234;ملاحظة`}
+            placeholder={`${t("pasteData")}\nمثال:\nHilux 2315AZ00 suivi les antenne chauffeur ebah tel 43330054`}
             value={reportingInput}
-            onChange={(e) => setReportingInput(e.target.value)}
+            onChange={(e) => handleReportingInputChange(e.target.value)}
             className="w-full p-3 border rounded dark:bg-gray-700"
           />
-          <button onClick={handleReportingSubmit} disabled={reportingLoading} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded">
+          
+          {parsedReporting.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-md font-bold mb-2">📊 المعاينة (البيانات المستخرجة):</h3>
+              <div className="overflow-x-auto border rounded">
+                <table className="w-full text-sm border-collapse">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="p-2 border">نوع المركبة</th>
+                      <th className="p-2 border">رقم التسجيل</th>
+                      <th className="p-2 border">اسم السائق</th>
+                      <th className="p-2 border">رقم السائق</th>
+                      <th className="p-2 border">طبيعة التدخل</th>
+                      <th className="p-2 border">ملاحظة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parsedReporting.map((item, idx) => (
+                      <tr key={idx}>
+                        <td className="p-2 border">{item.vehicule_type}</td>
+                        <td className="p-2 border">{item.vehicule_matricule}</td>
+                        <td className="p-2 border">{item.chauffeur_nom}</td>
+                        <td className="p-2 border">{item.chauffeur_telephone}</td>
+                        <td className="p-2 border">{item.nature_intervention}</td>
+                        <td className="p-2 border">{item.observation}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <button onClick={handleSaveReporting} disabled={reportingLoading || parsedReporting.length === 0} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded disabled:opacity-50">
             {reportingLoading ? t("saving") : `💾 ${t("save")}`}
           </button>
-          <h3 className="text-lg font-bold mt-8 mb-3">📋 {t("recordsLast24h")}</h3>
+
+          <h3 className="text-lg font-bold mt-8 mb-3">📋 السجلات المسجلة (آخر 24 ساعة)</h3>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead className="bg-gray-100">
@@ -307,15 +468,45 @@ export default function NightReportsPage() {
           <h2 className="text-xl font-bold mb-4">➕ {t("addData")}</h2>
           <textarea
             rows={6}
-            placeholder={`${t("pasteData")}\n${t("example")}: 1;Centre A;Camion;123-ABC;Ahmed;0612345678`}
+            placeholder={`${t("pasteData")}\nمثال:\nHilux 0423AZ00 chauffeur mouhamedou tel 46772963`}
             value={stationneeInput}
-            onChange={(e) => setStationneeInput(e.target.value)}
+            onChange={(e) => handleStationneeInputChange(e.target.value)}
             className="w-full p-3 border rounded dark:bg-gray-700"
           />
-          <button onClick={handleStationneeSubmit} disabled={stationneeLoading} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded">
+          
+          {parsedStationnee.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-md font-bold mb-2">📊 المعاينة (البيانات المستخرجة):</h3>
+              <div className="overflow-x-auto border rounded">
+                <table className="w-full text-sm border-collapse">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="p-2 border">نوع المركبة</th>
+                      <th className="p-2 border">رقم التسجيل</th>
+                      <th className="p-2 border">اسم السائق</th>
+                      <th className="p-2 border">رقم السائق</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parsedStationnee.map((item, idx) => (
+                      <tr key={idx}>
+                        <td className="p-2 border">{item.vehicule_type}</td>
+                        <td className="p-2 border">{item.vehicule_matricule}</td>
+                        <td className="p-2 border">{item.chauffeur_nom}</td>
+                        <td className="p-2 border">{item.chauffeur_telephone}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <button onClick={handleSaveStationnee} disabled={stationneeLoading || parsedStationnee.length === 0} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded disabled:opacity-50">
             {stationneeLoading ? t("saving") : `💾 ${t("save")}`}
           </button>
-          <h3 className="text-lg font-bold mt-8 mb-3">📋 {t("recordsLast24h")}</h3>
+
+          <h3 className="text-lg font-bold mt-8 mb-3">📋 السجلات المسجلة (آخر 24 ساعة)</h3>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead className="bg-gray-100">
@@ -344,7 +535,7 @@ export default function NightReportsPage() {
                 {stationneeData.length === 0 && (
                   <tr>
                     <td colSpan={7} className="p-4 text-center text-gray-500">{t("noData")}</td>
-                   </tr>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -353,54 +544,84 @@ export default function NightReportsPage() {
       )}
 
       {activeTab === "panne" && (
-        <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold mb-4">➕ {t("addData")}</h2>
-          <textarea
-            rows={6}
-            placeholder={`${t("pasteData")}\n${t("example")}: 1;Centre A;Camion;123-ABC;Ahmed;0612345678`}
-            value={panneInput}
-            onChange={(e) => setPanneInput(e.target.value)}
-            className="w-full p-3 border rounded dark:bg-gray-700"
-          />
-          <button onClick={handlePanneSubmit} disabled={panneLoading} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded">
-            {panneLoading ? t("saving") : `💾 ${t("save")}`}
-          </button>
-          <h3 className="text-lg font-bold mt-8 mb-3">📋 {t("recordsLast24h")}</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="p-2 border">{t("columns.numero")}</th>
-                  <th className="p-2 border">{t("columns.centre")}</th>
-                  <th className="p-2 border">{t("columns.vehiculeType")}</th>
-                  <th className="p-2 border">{t("columns.matricule")}</th>
-                  <th className="p-2 border">{t("columns.chauffeurName")}</th>
-                  <th className="p-2 border">{t("columns.chauffeurPhone")}</th>
-                  <th className="p-2 border">{t("columns.date")}</th>
+  <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md">
+    <h2 className="text-xl font-bold mb-4">➕ {t("addData")}</h2>
+    <textarea
+      rows={6}
+      placeholder={`${t("pasteData")}\nمثال:\nVerso 1007BC00 dérangement SAWI chauffeur med tel 46576565`}
+      value={panneInput}
+      onChange={(e) => handlePanneInputChange(e.target.value)}
+      className="w-full p-3 border rounded dark:bg-gray-700"
+    />
+    
+    {parsedPanne.length > 0 && (
+      <div className="mt-4">
+        <h3 className="text-md font-bold mb-2">📊 المعاينة (البيانات المستخرجة):</h3>
+        <div className="overflow-x-auto border rounded">
+          <table className="w-full text-sm border-collapse">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-2 border">نوع المركبة</th>
+                <th className="p-2 border">رقم التسجيل</th>
+                <th className="p-2 border">اسم السائق</th>
+                <th className="p-2 border">رقم السائق</th>
+              </tr>
+            </thead>
+            <tbody>
+              {parsedPanne.map((item, idx) => (
+                <tr key={idx}>
+                  <td className="p-2 border">{item.vehicule_type}</td>
+                  <td className="p-2 border">{item.vehicule_matricule}</td>
+                  <td className="p-2 border">{item.chauffeur_nom}</td>
+                  <td className="p-2 border">{item.chauffeur_telephone}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {panneData.map((p) => (
-                  <tr key={p.id}>
-                    <td className="p-2 border">{p.numero}</td>
-                    <td className="p-2 border">{p.centre}</td>
-                    <td className="p-2 border">{p.vehicule_type}</td>
-                    <td className="p-2 border">{p.vehicule_matricule}</td>
-                    <td className="p-2 border">{p.chauffeur_nom}</td>
-                    <td className="p-2 border">{p.chauffeur_telephone}</td>
-                    <td className="p-2 border">{new Date(p.created_at).toLocaleString()}</td>
-                  </tr>
-                ))}
-                {panneData.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="p-4 text-center text-gray-500">{t("noData")}</td>
-                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
+    )}
+
+    <button onClick={handleSavePanne} disabled={panneLoading || parsedPanne.length === 0} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded disabled:opacity-50">
+      {panneLoading ? t("saving") : `💾 ${t("save")}`}
+    </button>
+
+    <h3 className="text-lg font-bold mt-8 mb-3">📋 السجلات المسجلة (آخر 24 ساعة)</h3>
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-sm">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="p-2 border">{t("columns.numero")}</th>
+            <th className="p-2 border">{t("columns.centre")}</th>
+            <th className="p-2 border">{t("columns.vehiculeType")}</th>
+            <th className="p-2 border">{t("columns.matricule")}</th>
+            <th className="p-2 border">{t("columns.chauffeurName")}</th>
+            <th className="p-2 border">{t("columns.chauffeurPhone")}</th>
+            <th className="p-2 border">{t("columns.date")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {panneData.map((p) => (
+            <tr key={p.id}>
+              <td className="p-2 border">{p.numero}</td>
+              <td className="p-2 border">{p.centre}</td>
+              <td className="p-2 border">{p.vehicule_type}</td>
+              <td className="p-2 border">{p.vehicule_matricule}</td>
+              <td className="p-2 border">{p.chauffeur_nom}</td>
+              <td className="p-2 border">{p.chauffeur_telephone}</td>
+              <td className="p-2 border">{new Date(p.created_at).toLocaleString()}</td>
+            </tr>
+          ))}
+          {panneData.length === 0 && (
+            <tr>
+              <td colSpan={7} className="p-4 text-center text-gray-500">{t("noData")}</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
     </div>
   );
 }
