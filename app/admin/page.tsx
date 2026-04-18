@@ -426,13 +426,13 @@ export default function AdminPage() {
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="bg-gray-100 dark:bg-gray-700">
-                    <th className="p-2 border text-right text-gray-800 dark:text-gray-200">{t("name")}</th>
-                    <th className="p-2 border text-right text-gray-800 dark:text-gray-200">{t("phone")}</th>
-                    <th className="p-2 border text-right text-gray-800 dark:text-gray-200">{t("role")}</th>
-                    <th className="p-2 border text-right text-gray-800 dark:text-gray-200">{t("team")}</th>
-                    <th className="p-2 border text-right text-gray-800 dark:text-gray-200">{t("salary")}</th>
-                    <th className="p-2 border text-right text-gray-800 dark:text-gray-200">{t("pin")}</th>
-                   </td>
+                    <th className="p-2 border">{t("name")}</th>
+                    <th className="p-2 border">{t("phone")}</th>
+                    <th className="p-2 border">{t("role")}</th>
+                    <th className="p-2 border">{t("team")}</th>
+                    <th className="p-2 border">{t("salary")}</th>
+                    <th className="p-2 border">{t("pin")}</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {employees.length === 0 ? (
@@ -444,15 +444,15 @@ export default function AdminPage() {
                   ) : (
                     employees.map((emp) => (
                       <tr key={emp.id} className="border-b dark:border-gray-700">
-                        <td className="p-2 border dark:border-gray-700 text-gray-800 dark:text-gray-200">{emp.name}</td>
-                        <td className="p-2 border dark:border-gray-700 text-gray-800 dark:text-gray-200">{emp.phone}</td>
-                        <td className="p-2 border dark:border-gray-700 text-gray-800 dark:text-gray-200">{emp.role}</td>
-                        <td className="p-2 border dark:border-gray-700 text-gray-800 dark:text-gray-200">{emp.team_name}</td>
-                        <td className="p-2 border dark:border-gray-700 text-gray-800 dark:text-gray-200">{emp.salary} {currency}</td>
-                        <td className="p-2 border dark:border-gray-700">
-                          <code className="bg-gray-100 dark:bg-gray-700 p-1 rounded text-gray-800 dark:text-gray-200">{emp.pin}</code>
+                        <td className="p-2 border">{emp.name}</td>
+                        <td className="p-2 border">{emp.phone}</td>
+                        <td className="p-2 border">{emp.role}</td>
+                        <td className="p-2 border">{emp.team_name}</td>
+                        <td className="p-2 border">{emp.salary} {currency}</td>
+                        <td className="p-2 border">
+                          <code className="bg-gray-100 dark:bg-gray-700 p-1 rounded">{emp.pin}</code>
                         </td>
-                      </td>
+                      </tr>
                     ))
                   )}
                 </tbody>
