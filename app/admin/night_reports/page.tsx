@@ -16,6 +16,7 @@ type ReportingRecord = {
   chauffeur_telephone: string;
   nature_intervention: string;
   type_point: string;
+  gps: string;
   observation: string;
   created_at: string;
 };
@@ -93,55 +94,55 @@ export default function NightReportsPage() {
     }
   }, [adminId]);
 
-  // دالة تحليل سطر Reporting Service
+  // دالة تحليل سطر Reporting Service (9 أعمدة)
   const parseReportingLine = (line: string) => {
     let cleanLine = line.replace(/^\*\s*/, "").trim();
+    
+    // محاولة استخراج البيانات باستخدام تعبيرات منتظمة
+    // مثال: "Hilux 2315AZOO suivi les antenne chauffeur ebah tel 43330054"
+    
     const parts = cleanLine.split(/\s+/);
     if (parts.length < 3) return null;
 
-    // نوع المركبة + رقم التسجيل معاً في عمود واحد
+    // نوع المركبة ورقم التسجيل
     const vehicule_complet = `${parts[0]} ${parts[1]}`;
     let remaining = parts.slice(2).join(" ");
 
-    // استخراج رقم الهاتف
+    // استخراج رقم الهاتف (بعد كلمة tel)
     let chauffeur_telephone = "";
-    let telIndex = remaining.toLowerCase().indexOf("tel");
-    if (telIndex !== -1) {
-      const telPart = remaining.slice(telIndex).split(/\s+/);
-      chauffeur_telephone = telPart[1] || "";
-      remaining = remaining.slice(0, telIndex).trim();
+    const telMatch = remaining.match(/tel\s+(\d+)/i);
+    if (telMatch) {
+      chauffeur_telephone = telMatch[1];
+      remaining = remaining.replace(/tel\s+\d+/i, "").trim();
     }
 
-    // استخراج اسم السائق
+    // استخراج اسم السائق (بعد كلمة chauffeur)
     let chauffeur_nom = "";
-    let chauffeurIndex = remaining.toLowerCase().indexOf("chauffeur");
-    if (chauffeurIndex !== -1) {
-      chauffeur_nom = remaining.slice(chauffeurIndex + 8).trim();
-      remaining = remaining.slice(0, chauffeurIndex).trim();
+    const chauffeurMatch = remaining.match(/chauffeur\s+(.+?)(?:\s+suivi|\s+dérangement|\s+FTTH|\s+SAWI|\s+BLR|$)/i);
+    if (chauffeurMatch) {
+      chauffeur_nom = chauffeurMatch[1].trim();
+      remaining = remaining.replace(/chauffeur\s+.+?(?=\s+suivi|\s+dérangement|\s+FTTH|\s+SAWI|\s+BLR|$)/i, "").trim();
     } else {
-      chauffeur_nom = remaining;
-      remaining = "";
-    }
-
-    // تحديد طبيعة التدخل (اختياري)
-    const interventionTypes = ["suivi", "FTTH", "dérangement", "SAWI", "BLR", "permanence"];
-    let nature_intervention = "";
-    for (const it of interventionTypes) {
-      if (remaining.toLowerCase().includes(it.toLowerCase())) {
-        nature_intervention = it;
-        break;
+      // إذا لم يذكر "chauffeur"، نعتبر أول كلمة بعد الرقم هي الاسم
+      const words = remaining.split(/\s+/);
+      if (words.length > 0) {
+        chauffeur_nom = words[0];
+        remaining = words.slice(1).join(" ");
       }
     }
+
+    // باقي النص هو Nature intervention
+    let nature_intervention = remaining;
 
     return {
       vehicule_complet,
       chauffeur_nom,
       chauffeur_telephone,
-      nature_intervention: nature_intervention || remaining,
+      nature_intervention,
     };
   };
 
-  // دالة تحليل سطر Voiture (Stationnee / Panne)
+  // دالة تحليل سطر Voiture
   const parseVoitureLine = (line: string) => {
     let cleanLine = line.replace(/^\*\s*/, "").trim();
     const parts = cleanLine.split(/\s+/);
@@ -151,17 +152,16 @@ export default function NightReportsPage() {
     let remaining = parts.slice(2).join(" ");
 
     let chauffeur_telephone = "";
-    let telIndex = remaining.toLowerCase().indexOf("tel");
-    if (telIndex !== -1) {
-      const telPart = remaining.slice(telIndex).split(/\s+/);
-      chauffeur_telephone = telPart[1] || "";
-      remaining = remaining.slice(0, telIndex).trim();
+    const telMatch = remaining.match(/tel\s+(\d+)/i);
+    if (telMatch) {
+      chauffeur_telephone = telMatch[1];
+      remaining = remaining.replace(/tel\s+\d+/i, "").trim();
     }
 
     let chauffeur_nom = "";
-    let chauffeurIndex = remaining.toLowerCase().indexOf("chauffeur");
-    if (chauffeurIndex !== -1) {
-      chauffeur_nom = remaining.slice(chauffeurIndex + 8).trim();
+    const chauffeurMatch = remaining.match(/chauffeur\s+(.+)/i);
+    if (chauffeurMatch) {
+      chauffeur_nom = chauffeurMatch[1].trim();
     } else {
       chauffeur_nom = remaining;
     }
@@ -173,6 +173,7 @@ export default function NightReportsPage() {
     setReportingInput(value);
     const lines = value.split("\n").filter((line) => line.trim());
     const parsed = lines.map(parseReportingLine).filter((p) => p !== null);
+    console.log("Parsed reporting lines:", parsed);
     setParsedReporting(parsed);
   };
 
@@ -191,9 +192,19 @@ export default function NightReportsPage() {
   };
 
   const handleSaveReporting = async () => {
-    if (!adminId || parsedReporting.length === 0) return;
+    if (!adminId) {
+      toast.error("لم يتم العثور على معرف المدير");
+      return;
+    }
+    if (parsedReporting.length === 0) {
+      toast.error("لا توجد بيانات للحفظ. تأكد من لصق البيانات بشكل صحيح.");
+      return;
+    }
+    
     setReportingLoading(true);
     let successCount = 0;
+    let errorCount = 0;
+    
     for (const item of parsedReporting) {
       const { error } = await supabase.from("reporting_service_nocturne").insert({
         numero: successCount + 1,
@@ -203,12 +214,25 @@ export default function NightReportsPage() {
         chauffeur_telephone: item.chauffeur_telephone,
         nature_intervention: item.nature_intervention || "",
         type_point: "",
+        gps: "",
         observation: "",
         admin_id: adminId,
       });
-      if (!error) successCount++;
+      if (error) {
+        console.error("Error saving:", error);
+        errorCount++;
+      } else {
+        successCount++;
+      }
     }
-    toast.success(`✅ تم حفظ ${successCount} سجل`);
+    
+    if (successCount > 0) {
+      toast.success(`✅ تم حفظ ${successCount} سجل`);
+    }
+    if (errorCount > 0) {
+      toast.error(`❌ فشل حفظ ${errorCount} سجل`);
+    }
+    
     setReportingInput("");
     setParsedReporting([]);
     await fetchReportingData();
@@ -216,7 +240,10 @@ export default function NightReportsPage() {
   };
 
   const handleSaveStationnee = async () => {
-    if (!adminId || parsedStationnee.length === 0) return;
+    if (!adminId || parsedStationnee.length === 0) {
+      toast.error("لا توجد بيانات للحفظ");
+      return;
+    }
     setStationneeLoading(true);
     let successCount = 0;
     for (const item of parsedStationnee) {
@@ -238,7 +265,10 @@ export default function NightReportsPage() {
   };
 
   const handleSavePanne = async () => {
-    if (!adminId || parsedPanne.length === 0) return;
+    if (!adminId || parsedPanne.length === 0) {
+      toast.error("لا توجد بيانات للحفظ");
+      return;
+    }
     setPanneLoading(true);
     let successCount = 0;
     for (const item of parsedPanne) {
@@ -262,7 +292,7 @@ export default function NightReportsPage() {
   const exportToExcel = () => {
     const workbook = XLSX.utils.book_new();
 
-    // ورقة Reporting Service Nocturne
+    // ورقة Reporting Service Nocturne (9 أعمدة)
     const reportingSheetData = reportingData.map((r, idx) => ({
       "N°": idx + 1,
       "Centre": r.centre,
@@ -271,6 +301,7 @@ export default function NightReportsPage() {
       "Numéro du Chauffeur": r.chauffeur_telephone,
       "Nature intervention": r.nature_intervention,
       "Type de point": r.type_point,
+      "Coordonnées GPS (Latitude / Longitude)": r.gps,
       "Observation": r.observation,
     }));
     const reportingSheet = XLSX.utils.json_to_sheet(reportingSheetData);
@@ -323,13 +354,13 @@ export default function NightReportsPage() {
         </button>
       </div>
 
-      {/* ===== TAB 1: Reporting Service Nocturne ===== */}
+      {/* ===== TAB 1: Reporting Service Nocturne (9 أعمدة) ===== */}
       {activeTab === "reporting" && (
         <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md">
           <h2 className="text-xl font-bold mb-4">➕ إضافة تقارير الخدمة الليلية</h2>
           <textarea
             rows={6}
-            placeholder="الصق البيانات هنا...\nمثال: Hilux 2315AZ00 suivi les antenne chauffeur ebah tel 43330054"
+            placeholder={`الصق البيانات هنا...\nمثال: Hilux 2315AZ00 suivi les antenne chauffeur ebah tel 43330054\nأو:\nHilux 0423AZ00 dérangements FTTH chauffeur mouhamedou tel 46772963\nأو:\nVerso 1007BC00 dérangement SAWI chauffeur med tel 46576565`}
             value={reportingInput}
             onChange={(e) => handleReportingInputChange(e.target.value)}
             className="w-full p-3 border rounded dark:bg-gray-700"
@@ -363,7 +394,7 @@ export default function NightReportsPage() {
             </div>
           )}
 
-          <button onClick={handleSaveReporting} disabled={reportingLoading || parsedReporting.length === 0} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded disabled:opacity-50">
+          <button onClick={handleSaveReporting} disabled={reportingLoading} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded disabled:opacity-50">
             {reportingLoading ? "جاري الحفظ..." : "💾 حفظ البيانات"}
           </button>
 
@@ -379,6 +410,7 @@ export default function NightReportsPage() {
                   <th className="p-2 border">Numéro du Chauffeur</th>
                   <th className="p-2 border">Nature intervention</th>
                   <th className="p-2 border">Type de point</th>
+                  <th className="p-2 border">Coordonnées GPS</th>
                   <th className="p-2 border">Observation</th>
                 </tr>
               </thead>
@@ -392,12 +424,13 @@ export default function NightReportsPage() {
                     <td className="p-2 border">{r.chauffeur_telephone}</td>
                     <td className="p-2 border">{r.nature_intervention}</td>
                     <td className="p-2 border">{r.type_point}</td>
+                    <td className="p-2 border">{r.gps}</td>
                     <td className="p-2 border">{r.observation}</td>
                   </tr>
                 ))}
                 {reportingData.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="p-4 text-center text-gray-500">لا توجد بيانات</td>
+                    <td colSpan={9} className="p-4 text-center text-gray-500">لا توجد بيانات</td>
                   </tr>
                 )}
               </tbody>
@@ -444,7 +477,7 @@ export default function NightReportsPage() {
             </div>
           )}
 
-          <button onClick={handleSaveStationnee} disabled={stationneeLoading || parsedStationnee.length === 0} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded disabled:opacity-50">
+          <button onClick={handleSaveStationnee} disabled={stationneeLoading} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded disabled:opacity-50">
             {stationneeLoading ? "جاري الحفظ..." : "💾 حفظ البيانات"}
           </button>
 
@@ -506,20 +539,21 @@ export default function NightReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {parsedPanne.map((item, idx) => (
-                      <tr key={idx}>
-                        <td className="p-2 border">{item.vehicule_complet}</td>
-                        <td className="p-2 border">{item.chauffeur_nom}</td>
-                        <td className="p-2 border">{item.chauffeur_telephone}</td>
-                      </tr>
-                    ))}
+                   {parsedPanne.map((item, idx) => (
+  <tr key={idx}>
+    <td className="p-2 border">{item.vehicule_complet}</td>
+    <td className="p-2 border">{item.chauffeur_nom}</td>
+    <td className="p-2 border">{item.chauffeur_telephone}</td>
+  </tr>
+))} 
+                  
                   </tbody>
                 </table>
               </div>
             </div>
           )}
 
-          <button onClick={handleSavePanne} disabled={panneLoading || parsedPanne.length === 0} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded disabled:opacity-50">
+          <button onClick={handleSavePanne} disabled={panneLoading} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded disabled:opacity-50">
             {panneLoading ? "جاري الحفظ..." : "💾 حفظ البيانات"}
           </button>
 
